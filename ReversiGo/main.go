@@ -31,7 +31,7 @@ type Game struct {
 	Time      float64
 	Ack       bool
 	GameOver  bool
-	Board     board
+	Board     Board
 }
 
 func (client *Client) receive(myGame *Game) {
@@ -83,7 +83,7 @@ func (client *Client) receive(myGame *Game) {
 				p2Time: p2t,
 			}
 
-			myGame.Board = board{
+			myGame.Board = Board{
 				layout: data[4:68],
 				turn:   message.Turn,
 				round:  message.Round,
@@ -146,8 +146,8 @@ func main() {
 
 		//Right now this is where the logic to send a turn lives, this is porbably no where it should live
 		if myGame.Board.turn == myGame.PlayerNum && myGame.Ack && !myGame.GameOver && stop < 5 {
-			move := findMove(myGame.Board)
-			client.SendMove(move.x, move.y)
+			move := findMove(&myGame.Board, 3)
+			client.SendMove(move.squares[0].x, move.squares[0].y)
 			// stop++
 		}
 	}

@@ -1,6 +1,8 @@
 package main
 
+/*
 import (
+	"fmt"
 	"math/rand"
 	"strings"
 )
@@ -19,44 +21,44 @@ func (b board) String() string {
 	return ret
 }
 
-func (b *board) validMoves() []square {
+func (b *board) validMoves() []move {
 	player := b.turn
 	enemy := "2"
 	if player == "2" {
 		enemy = "1"
 	}
 
-	squares := []square{}
+	moves := []move{}
 	if b.square(3, 3).stone == "0" {
-		squares = append(squares, square{
+		moves = append(moves, move{
+			orgX:  3,
+			orgY:  3,
 			stone: player,
-			x:     3,
-			y:     3,
 		})
 	}
 	if b.square(4, 3).stone == "0" {
-		squares = append(squares, square{
+		moves = append(moves, move{
+			orgX:  4,
+			orgY:  3,
 			stone: player,
-			x:     4,
-			y:     3,
 		})
 	}
 	if b.square(3, 4).stone == "0" {
-		squares = append(squares, square{
+		moves = append(moves, move{
+			orgX:  3,
+			orgY:  4,
 			stone: player,
-			x:     3,
-			y:     4,
 		})
 	}
 	if b.square(4, 4).stone == "0" {
-		squares = append(squares, square{
+		moves = append(moves, move{
+			orgX:  4,
+			orgY:  4,
 			stone: player,
-			x:     4,
-			y:     4,
 		})
 	}
-	if len(squares) > 0 {
-		return squares
+	if len(moves) > 0 {
+		return moves
 	}
 
 	for x := 0; x < 8; x++ {
@@ -72,15 +74,11 @@ func (b *board) validMoves() []square {
 					continue
 				}
 				for a.next() {
+					destx, desty := a.dest()
 					piece := b.square(a.dest()).stone
 					if piece == "0" {
 						//this is a valid move
-						destx, desty := a.dest()
-						squares = append(squares, square{
-							stone: player,
-							x:     destx,
-							y:     desty,
-						})
+						moves = append(moves, a)
 						break
 					}
 					if piece == player {
@@ -91,7 +89,7 @@ func (b *board) validMoves() []square {
 			}
 		}
 	}
-	return squares
+	return moves
 }
 
 func (b *board) square(x, y int) square {
@@ -102,10 +100,17 @@ func (b *board) square(x, y int) square {
 	}
 }
 
-func newBoard(b board, s square) board {
+func newBoard(b board, m move) board {
 	newB := make([]string, 64)
 	copy(newB, b.layout)
-	newB[s.x*8+s.y] = s.stone
+	//Update the board
+	for s := 0; s <= m.steps; s++ {
+		x := m.orgX + (s * m.dirX)
+		y := m.orgY + (s * m.dirY)
+		fmt.Printf("update %d, %d, %d\n", x, y, s)
+		newB[x*8+y] = m.stone
+	}
+
 	newTurn := "1"
 	if b.turn == "1" {
 		newTurn = "2"
@@ -150,12 +155,13 @@ func (s *square) adjacent() []move {
 }
 
 type move struct {
-	stone string
-	orgX  int
-	orgY  int
-	steps int
-	dirX  int
-	dirY  int
+	stone    string
+	orgX     int
+	orgY     int
+	steps    int
+	dirX     int
+	dirY     int
+	children []move
 }
 
 func (m *move) next() bool {
@@ -182,31 +188,32 @@ func (m *move) dest() (int, int) {
 		m.orgY + (m.steps * m.dirY)
 }
 
-func findMove(b board) square {
+func findMove(b board) move {
 	best := -1
 	moves := b.validMoves()
-	move := square{
-		x:     rand.Intn(7),
-		y:     rand.Intn(7),
+	move := move{ //pick a random move if we can't find a valid one
+		orgX:  rand.Intn(7),
+		orgY:  rand.Intn(7),
 		stone: b.turn,
 	}
 	if len(moves) > 0 {
 		move = moves[0]
 	}
 	for _, m := range moves {
-		if scoreMove(newBoard(b, m), 3) > best {
+		fmt.Printf("Start with board: %s\n", newBoard(b, m))
+		if scoreMove(newBoard(b, m), b.turn, 1) > best {
 			move = m
 		}
 	}
 	return move
 }
 
-func scoreMove(b board, depth int) int {
+func scoreMove(b board, player string, depth int) int {
 	if depth == 0 {
-		// e := "1"
-		// if b.turn == "1" {
-		// 	e = "2"
-		// }
+		enemy := "1"
+		if player == "1" {
+			enemy = "2"
+		}
 		// score := 0
 		// for x := 0; x < 8; x++ {
 		// 	for y := 0; y < 8; y++ {
@@ -215,62 +222,92 @@ func scoreMove(b board, depth int) int {
 		// 		}
 		// 	}
 		// }
-		len := len(b.validMoves())
-		// corner := 0
-		// if b.square(0, 0).stone == b.turn {
-		// 	corner += 10
-		// }
-		// if b.square(7, 7).stone == b.turn {
-		// 	corner += 10
-		// }
-		// if b.square(0, 7).stone == b.turn {
-		// 	corner += 10
-		// }
-		// if b.square(7, 0).stone == b.turn {
-		// 	corner += 10
-		// }
-		// xs := 0
-		// if b.square(1, 1).stone == b.turn {
-		// 	xs += 8
-		// }
-		// if b.square(1, 6).stone == b.turn {
-		// 	xs += 8
-		// }
-		// if b.square(6, 6).stone == b.turn {
-		// 	xs += 8
-		// }
-		// if b.square(6, 1).stone == b.turn {
-		// 	xs += 8
-		// }
-		// xsp := 0
-		// if b.square(1, 1).stone == e {
-		// 	xsp += 8
-		// }
-		// if b.square(1, 6).stone == e {
-		// 	xsp += 8
-		// }
-		// if b.square(6, 6).stone == e {
-		// 	xsp += 8
-		// }
-		// if b.square(6, 1).stone == e {
-		// 	xsp += 8
-		// }
-		return len // + corner - xs + xsp
+		b.turn = player
+		mlen := len(b.validMoves())
+		b.turn = enemy
+		nlen := len(b.validMoves())
+		corner := 0
+		if b.square(0, 0).stone == player {
+			corner += 10
+		}
+		if b.square(7, 7).stone == player {
+			corner += 10
+		}
+		if b.square(0, 7).stone == player {
+			corner += 10
+		}
+		if b.square(7, 0).stone == player {
+			corner += 10
+		}
+		bcorner := 0
+		if b.square(0, 0).stone == enemy {
+			bcorner += 8
+		}
+		if b.square(7, 7).stone == enemy {
+			bcorner += 8
+		}
+		if b.square(0, 7).stone == enemy {
+			bcorner += 8
+		}
+		if b.square(7, 0).stone == enemy {
+			bcorner += 8
+		}
+		xs := 0
+		if b.square(1, 1).stone == player {
+			xs += 10
+		}
+		if b.square(1, 6).stone == player {
+			xs += 10
+		}
+		if b.square(6, 6).stone == player {
+			xs += 10
+		}
+		if b.square(6, 1).stone == player {
+			xs += 10
+		}
+		xsp := 0
+		if b.square(1, 1).stone == enemy {
+			xsp += 8
+		}
+		if b.square(1, 6).stone == enemy {
+			xsp += 8
+		}
+		if b.square(6, 6).stone == enemy {
+			xsp += 8
+		}
+		if b.square(6, 1).stone == enemy {
+			xsp += 8
+		}
+		fmt.Printf("mlen: %d, nlen:%d, corner:%d, bcorner:%d, xs: %d, xsp: %d\n", mlen, nlen, corner, bcorner, xs, xsp)
+		return mlen - nlen + corner - bcorner + xsp - xs
 	}
 	depth--
 
 	var ret int
-	ret = -1000000
+	ret = 1000000
+	max := b.turn == player
+	if max {
+		ret = -1000000
+	}
 	moves := b.validMoves()
 	if len(moves) == 0 {
-		score := scoreMove(b, 0)
+		score := scoreMove(b, player, 0)
 		return score
 	}
 	for _, m := range moves {
-		score := scoreMove(newBoard(b, m), depth)
-		if score > ret {
-			ret = score
+		fmt.Printf("Looking at board: %s\n", newBoard(b, m))
+		score := scoreMove(newBoard(b, m), player, depth)
+		//Max
+		if max {
+			if score > ret {
+				ret = score
+			}
+		} else {
+			if score < ret {
+				ret = score
+			}
 		}
 	}
 	return ret
 }
+*/
