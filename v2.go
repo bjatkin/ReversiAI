@@ -1,42 +1,61 @@
 package main
 
+import (
+	"strings"
+)
+
 type board struct {
 	layout []string
 	turn   string
+	round  string
 }
 
-func (b *board) validMoves() []move {
-	player := b.turn
+func (b board) String() string {
+	ret := "\n"
+	for x := 0; x < 8; x++ {
+		ret += strings.Join(b.layout[(x*8):(x*8)+8], "") + "\n"
+	}
+	return ret
+}
 
-	moves := []move{}
+func (b *board) validMoves() []square {
+	player := b.turn
+	enemy := "2"
+	if player == "2" {
+		enemy = "1"
+	}
+
+	squares := []square{}
 	if b.square(3, 3).stone == "0" {
-		moves = append(moves, move{
+		squares = append(squares, square{
 			stone: player,
-			orgX:  3,
-			orgY:  3,
+			x:     3,
+			y:     3,
 		})
 	}
 	if b.square(4, 3).stone == "0" {
-		moves = append(moves, move{
+		squares = append(squares, square{
 			stone: player,
-			orgX:  4,
-			orgY:  3,
+			x:     4,
+			y:     3,
 		})
-
 	}
 	if b.square(3, 4).stone == "0" {
-		moves = append(moves, move{
+		squares = append(squares, square{
 			stone: player,
-			orgX:  3,
-			orgY:  4,
+			x:     3,
+			y:     4,
 		})
 	}
 	if b.square(4, 4).stone == "0" {
-		moves = append(moves, move{
+		squares = append(squares, square{
 			stone: player,
-			orgX:  4,
-			orgY:  4,
+			x:     4,
+			y:     4,
 		})
+	}
+	if len(squares) > 0 {
+		return squares
 	}
 
 	for x := 0; x < 8; x++ {
@@ -48,11 +67,20 @@ func (b *board) validMoves() []move {
 			//get adjcent moves
 			adj := s.adjacent()
 			for _, a := range adj {
+				if b.square(a.dest()).stone != enemy {
+					continue
+				}
 				for a.next() {
 					piece := b.square(a.dest()).stone
 					if piece == "0" {
 						//this is a valid move
-						moves = append(moves, a)
+						destx, desty := a.dest()
+						squares = append(squares, square{
+							stone: player,
+							x:     destx,
+							y:     desty,
+						})
+						break
 					}
 					if piece == player {
 						//this is not a valid move
@@ -62,7 +90,7 @@ func (b *board) validMoves() []move {
 			}
 		}
 	}
-	return moves
+	return squares
 }
 
 func (b *board) square(x, y int) square {
@@ -92,7 +120,8 @@ type square struct {
 }
 
 func validSquare(x, y int) bool {
-	return x*8+y >= 0 && x*8+y < 64
+	// return x*8+y >= 0 && x*8+y < 64 && x >= 0 && y >= 0 && x < 8 && y < 8
+	return x >= 0 && y >= 0 && x < 8 && y < 8
 }
 
 func (s *square) adjacent() []move {
@@ -102,12 +131,12 @@ func (s *square) adjacent() []move {
 			if x == 0 && y == 0 {
 				continue
 			}
-			if validSquare(x, y) {
+			if validSquare(s.x+x, s.y+y) {
 				moves = append(moves, move{
 					stone: s.stone,
 					orgX:  s.x,
 					orgY:  s.y,
-					steps: 0,
+					steps: 1,
 					dirX:  x,
 					dirY:  y,
 				})
@@ -150,12 +179,12 @@ func (m *move) dest() (int, int) {
 		m.orgY + (m.steps * m.dirY)
 }
 
-func findMove(b board) move {
+func findMove(b board) square {
 	best := -1
 	moves := b.validMoves()
 	move := moves[0]
 	for _, m := range moves {
-		if scoreMove(newBoard(b, m.square())) > best {
+		if scoreMove(newBoard(b, m)) > best {
 			move = m
 		}
 	}
