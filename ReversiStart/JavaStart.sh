@@ -1,0 +1,1 @@
+cd ./../ReversiJava/ReversiRandom_Java && javac *.java && java RandomGuy 127.0.0.1 1 

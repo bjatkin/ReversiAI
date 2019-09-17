@@ -1,0 +1,1 @@
+cd ./../ReversiGo && go build && ./ReversiGo 127.0.0.1 2

@@ -1,0 +1,1 @@
+cd ./../ReversiJava/ReversiServer/ && javac *.java && java Reversi 30

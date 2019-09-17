@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"net"
 	"os"
 	"strconv"
@@ -89,7 +88,7 @@ func (client *Client) receive(myGame *Game) {
 				turn:   message.Turn,
 				round:  message.Round,
 			}
-			fmt.Printf("turn: %s\nround: %s\nboard: %s", message.Turn, message.Round, myGame.Board)
+			// fmt.Printf("turn: %s\nround: %s\nboard: %s", message.Turn, message.Round, myGame.Board)
 		}
 	}
 }
@@ -97,7 +96,7 @@ func (client *Client) receive(myGame *Game) {
 func (client *Client) SendMove(row, col int) {
 	now := time.Now().UnixNano()
 	if client.lastSent == 0 {
-		client.lastSent = now
+		client.lastSent = now - client.wait - 1
 	}
 	if now-client.lastSent < client.wait {
 		return
@@ -106,12 +105,12 @@ func (client *Client) SendMove(row, col int) {
 	move := fmt.Sprintf("%d\n%d", row, col)
 	client.socket.Write([]byte(move)) //Send the move
 	client.socket.Write([]byte("\n")) //Finish the message
-	fmt.Printf("\nI played this move (%d, %d)\n", row, col)
+	// fmt.Printf("\nI played this move (%d, %d)\n", row, col)
 }
 
 func (client *Client) RequestUpdate() {
 	client.socket.Write([]byte("\n")) //Request a new simple update
-	fmt.Println("Requesting update from the server")
+	// fmt.Println("Requesting update from the server")
 }
 
 func main() {
@@ -131,10 +130,11 @@ func main() {
 		return
 	}
 
-	client := &Client{socket: connection, wait: 100000000}
+	client := &Client{socket: connection, wait: 10000000}
 	myGame := Game{}
 	go client.receive(&myGame)
 	timeout := int64(10000000000)
+	stop := 0
 	for {
 		if time.Now().UnixNano()-client.lastSent > timeout && client.lastSent != 0 {
 			client.RequestUpdate() //need to jog the server
@@ -145,17 +145,10 @@ func main() {
 		}
 
 		//Right now this is where the logic to send a turn lives, this is porbably no where it should live
-		if myGame.Board.turn == myGame.PlayerNum && myGame.Ack && !myGame.GameOver {
-			moves := myGame.Board.validMoves() //findMove(myGame.Board)
-			move := square{
-				x:     rand.Intn(7),
-				y:     rand.Intn(7),
-				stone: myGame.PlayerNum,
-			}
-			if len(moves) > 0 {
-				move = moves[0]
-			}
+		if myGame.Board.turn == myGame.PlayerNum && myGame.Ack && !myGame.GameOver && stop < 5 {
+			move := findMove(myGame.Board)
 			client.SendMove(move.x, move.y)
+			// stop++
 		}
 	}
 }

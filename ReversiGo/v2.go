@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math/rand"
 	"strings"
 )
 
@@ -102,13 +103,15 @@ func (b *board) square(x, y int) square {
 }
 
 func newBoard(b board, s square) board {
-	b.layout[s.x*8+s.y] = s.stone
+	newB := make([]string, 64)
+	copy(newB, b.layout)
+	newB[s.x*8+s.y] = s.stone
 	newTurn := "1"
 	if b.turn == "1" {
 		newTurn = "2"
 	}
 	return board{
-		layout: b.layout,
+		layout: newB,
 		turn:   newTurn,
 	}
 }
@@ -182,15 +185,92 @@ func (m *move) dest() (int, int) {
 func findMove(b board) square {
 	best := -1
 	moves := b.validMoves()
-	move := moves[0]
+	move := square{
+		x:     rand.Intn(7),
+		y:     rand.Intn(7),
+		stone: b.turn,
+	}
+	if len(moves) > 0 {
+		move = moves[0]
+	}
 	for _, m := range moves {
-		if scoreMove(newBoard(b, m)) > best {
+		if scoreMove(newBoard(b, m), 3) > best {
 			move = m
 		}
 	}
 	return move
 }
 
-func scoreMove(b board) int {
-	return len(b.validMoves())
+func scoreMove(b board, depth int) int {
+	if depth == 0 {
+		// e := "1"
+		// if b.turn == "1" {
+		// 	e = "2"
+		// }
+		// score := 0
+		// for x := 0; x < 8; x++ {
+		// 	for y := 0; y < 8; y++ {
+		// 		if b.square(x, y).stone == b.turn {
+		// 			score++
+		// 		}
+		// 	}
+		// }
+		len := len(b.validMoves())
+		// corner := 0
+		// if b.square(0, 0).stone == b.turn {
+		// 	corner += 10
+		// }
+		// if b.square(7, 7).stone == b.turn {
+		// 	corner += 10
+		// }
+		// if b.square(0, 7).stone == b.turn {
+		// 	corner += 10
+		// }
+		// if b.square(7, 0).stone == b.turn {
+		// 	corner += 10
+		// }
+		// xs := 0
+		// if b.square(1, 1).stone == b.turn {
+		// 	xs += 8
+		// }
+		// if b.square(1, 6).stone == b.turn {
+		// 	xs += 8
+		// }
+		// if b.square(6, 6).stone == b.turn {
+		// 	xs += 8
+		// }
+		// if b.square(6, 1).stone == b.turn {
+		// 	xs += 8
+		// }
+		// xsp := 0
+		// if b.square(1, 1).stone == e {
+		// 	xsp += 8
+		// }
+		// if b.square(1, 6).stone == e {
+		// 	xsp += 8
+		// }
+		// if b.square(6, 6).stone == e {
+		// 	xsp += 8
+		// }
+		// if b.square(6, 1).stone == e {
+		// 	xsp += 8
+		// }
+		return len // + corner - xs + xsp
+	}
+	depth--
+
+	var ret int
+	ret = -1000000
+	moves := b.validMoves()
+	if len(moves) == 0 {
+		score := scoreMove(b, 0)
+		return score
+	}
+	for _, m := range moves {
+		score := scoreMove(newBoard(b, m), depth)
+		if score > ret {
+			ret = score
+		}
+	}
+	return ret
 }
