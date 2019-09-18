@@ -31,10 +31,21 @@ func (h *History) get(i int) string {
 }
 
 func main() {
-	score := 0
-	for i := 0; i < 50; i++ {
-		score += runServer()
-		fmt.Printf("\n\n(%d)SCORE: %d\n\n", i, score)
+	win := 0
+	loss := 0
+	tie := 0
+	for i := 0; i < 20; i++ {
+		score := runServer()
+		if score == 1 {
+			win++
+		}
+		if score == -1 {
+			loss++
+		}
+		if score == 0 {
+			tie++
+		}
+		fmt.Printf("\n\nRound: %d, Win: %d, Loss: %d, Tie: %d\n\n", i+1, win, loss, tie)
 	}
 }
 
@@ -58,7 +69,7 @@ func runServer() int {
 	history := History{size: 10}
 	for scanner.Scan() {
 		out := scanner.Text()
-		// fmt.Println(out)
+		fmt.Print(".")
 		history.add(out)
 		switch out {
 		case "Set up the connections:3334":
@@ -94,13 +105,15 @@ func runServer() int {
 			proc := ""
 			for _, p := range strings.Split(string(procs), "\n") { //find the pid to kill the server process
 				arr := strings.Split(p, " ")
-				if len(arr) < 8 {
+				if len(arr) < 9 {
 					continue
 				}
-				pid := arr[0]
-				process1, process2 := arr[6], arr[7]
+				// fmt.Printf("Arr: %#v", arr)
+				pid := arr[1]
+				process1, process2 := arr[7], arr[8]
 				if process1 == "/usr/bin/java" && process2 == "Reversi" {
 					proc = pid
+					break
 				}
 			}
 

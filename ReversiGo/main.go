@@ -17,17 +17,17 @@ type Client struct {
 }
 
 type Message struct {
-	Board    []string
-	Turn     string
-	Round    string
+	Board    [64]int
+	Turn     int
+	Round    int
 	GameOver bool
 	p1Time   float64
 	p2Time   float64
 }
 
 type Game struct {
-	PlayerNum string
-	EnemyNum  string
+	PlayerNum int
+	EnemyNum  int
 	Time      float64
 	Ack       bool
 	GameOver  bool
@@ -49,7 +49,13 @@ func (client *Client) receive(myGame *Game) {
 			data := strings.Split(string(message), "\n")
 			if !myGame.Ack {
 				data := strings.Split(data[0], " ")
-				myGame.PlayerNum = data[0]
+				pNum, err := strconv.ParseInt(data[0], 10, 32)
+				myGame.PlayerNum = int(pNum)
+				if err != nil {
+					fmt.Printf("Invalid player number recieved: '%s'\n", data[0])
+					client.socket.Close()
+					break
+				}
 				myGame.Time, err = strconv.ParseFloat(data[1], 32)
 				if err != nil {
 					fmt.Printf("Invalid game time recieved: '%s'\n", data[1])
@@ -65,6 +71,16 @@ func (client *Client) receive(myGame *Game) {
 				return //The game is over, stop reading stuff
 			}
 			// update the game state
+			turn, err := strconv.ParseInt(data[0], 10, 32)
+			if err != nil {
+				fmt.Printf("Game state not updated, invalid turn recieved '%s', Error: %s\n", data[0], err.Error())
+				continue
+			}
+			round, err := strconv.ParseInt(data[1], 10, 32)
+			if err != nil {
+				fmt.Printf("Game state not updated, invalid round recieved '%s', Error: %s\n", data[1], err.Error())
+				continue
+			}
 			p1t, err := strconv.ParseFloat(data[2], 32)
 			if err != nil {
 				fmt.Printf("Game state not updated, invalid p1Time recieved: '%s', Error: %s\n", data[2], err.Error())
@@ -75,16 +91,26 @@ func (client *Client) receive(myGame *Game) {
 				fmt.Printf("Game state not updated, invalid p2Time recieved: '%s', Error: %s\n", data[3], err.Error())
 				continue
 			}
+			//convert the board
+			board := [64]int{}
+			for i, s := range data[4:68] {
+				d, err := strconv.ParseInt(s, 10, 8)
+				if err != nil {
+					fmt.Printf("Game state not updated, invalid board recieved: '%+v', Error: %s\n", data[4:68], err.Error())
+				}
+				board[i] = int(d)
+			}
 
 			message := Message{
-				Turn:   data[0],
-				Round:  data[1],
+				Board:  board,
+				Turn:   int(turn),
+				Round:  int(round),
 				p1Time: p1t,
 				p2Time: p2t,
 			}
 
 			myGame.Board = Board{
-				layout: data[4:68],
+				layout: message.Board,
 				turn:   message.Turn,
 				round:  message.Round,
 			}
@@ -105,15 +131,30 @@ func (client *Client) SendMove(row, col int) {
 	move := fmt.Sprintf("%d\n%d", row, col)
 	client.socket.Write([]byte(move)) //Send the move
 	client.socket.Write([]byte("\n")) //Finish the message
-	// fmt.Printf("\nI played this move (%d, %d)\n", row, col)
+	fmt.Printf("\nMove: (%d, %d)\n", row, col)
 }
 
 func (client *Client) RequestUpdate() {
 	client.socket.Write([]byte("\n")) //Request a new simple update
-	// fmt.Println("Requesting update from the server")
+	fmt.Println("Requesting update from the server")
 }
 
 func main() {
+	// b := Board{
+	// 	layout: [64]int{
+	// 		0, 0, 0, 0, 0, 0, 0, 0,
+	// 		0, 0, 0, 0, 0, 0, 0, 0,
+	// 		0, 0, 0, 0, 0, 0, 0, 0,
+	// 		0, 0, 0, 2, 0, 0, 0, 0,
+	// 		0, 0, 0, 0, 0, 0, 0, 0,
+	// 		0, 0, 0, 0, 0, 0, 0, 0,
+	// 		0, 0, 0, 0, 0, 0, 0, 0,
+	// 		0, 0, 0, 0, 0, 0, 0, 0,
+	// 	},
+	// 	turn:  1,
+	// 	round: 1,
+	// }
+	// fmt.Printf("Moves: %+v", b.ValidMoves())
 	if len(os.Args) < 3 {
 		fmt.Printf("Please specify both the address of the server and the player number\n")
 		return
@@ -130,11 +171,11 @@ func main() {
 		return
 	}
 
-	client := &Client{socket: connection, wait: 10000000}
+	sec := 1000000000.0 //one second in nano seconds
+	client := &Client{socket: connection, wait: int64(0.01 * sec)}
 	myGame := Game{}
 	go client.receive(&myGame)
-	timeout := int64(10000000000)
-	stop := 0
+	timeout := int64(5 * sec)
 	for {
 		if time.Now().UnixNano()-client.lastSent > timeout && client.lastSent != 0 {
 			client.RequestUpdate() //need to jog the server
@@ -145,10 +186,10 @@ func main() {
 		}
 
 		//Right now this is where the logic to send a turn lives, this is porbably no where it should live
-		if myGame.Board.turn == myGame.PlayerNum && myGame.Ack && !myGame.GameOver && stop < 5 {
-			move := findMove(&myGame.Board, 3)
+		if myGame.Board.turn == myGame.PlayerNum && myGame.Ack && !myGame.GameOver {
+			fmt.Printf("Calculateing move...\n")
+			move := findMove(&myGame.Board, 4)
 			client.SendMove(move.squares[0].x, move.squares[0].y)
-			// stop++
 		}
 	}
 }

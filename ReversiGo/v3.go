@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"strings"
+	"strconv"
 )
 
 type Ray struct {
@@ -27,7 +27,7 @@ func (r *Ray) Dest() (int, int) {
 	return r.x + (r.s * r.dx), r.y + (r.s * r.dy)
 }
 
-func (r *Ray) Squares(stone string) []Square {
+func (r *Ray) Squares(stone int) []Square {
 	ret := []Square{}
 	for d := 1; d < r.s; d++ {
 		ret = append(ret, Square{
@@ -40,8 +40,7 @@ func (r *Ray) Squares(stone string) []Square {
 }
 
 type Square struct {
-	x, y  int
-	stone string
+	x, y, stone int
 }
 
 func (s *Square) Adj() []Ray {
@@ -69,13 +68,25 @@ func (s *Square) Adj() []Ray {
 }
 
 type Move struct {
-	squares []Square
+	squares [64]Square
+	index   int
+}
+
+func (m Move) String() string {
+	return fmt.Sprintf("%v", m.squares[:m.index])
+}
+
+func (m *Move) add(squares ...Square) {
+	for _, s := range squares {
+		m.squares[m.index] = s
+		m.index++
+	}
 }
 
 type Board struct {
-	layout []string
-	turn   string
-	round  string
+	layout [64]int
+	turn   int
+	round  int
 }
 
 func (b *Board) Move(m Move) {
@@ -87,7 +98,10 @@ func (b *Board) Move(m Move) {
 func (b Board) String() string {
 	ret := "\n"
 	for x := 0; x < 8; x++ {
-		ret += strings.Join(b.layout[(x*8):(x*8)+8], "") + "\n"
+		for y := 0; y < 8; y++ {
+			ret += strconv.Itoa(b.layout[x*8+y]) + " "
+		}
+		ret = "\n"
 	}
 	return ret
 }
@@ -106,31 +120,31 @@ func (b *Board) Square(x, y int) Square {
 
 func (b *Board) ValidMoves() []Move {
 	player := b.turn
-	enemy := "2"
-	if player == "2" {
-		enemy = "1"
+	enemy := 2
+	if player == 2 {
+		enemy = 1
 	}
 
 	moves := []Move{}
-	if b.Square(3, 3).stone == "0" {
-		moves = append(moves, Move{
-			[]Square{Square{x: 3, y: 3, stone: player}},
-		})
+	if b.Square(3, 3).stone == 0 {
+		m := Move{}
+		m.add(Square{x: 3, y: 3, stone: player})
+		moves = append(moves, m)
 	}
-	if b.Square(4, 3).stone == "0" {
-		moves = append(moves, Move{
-			[]Square{Square{x: 4, y: 3, stone: player}},
-		})
+	if b.Square(4, 3).stone == 0 {
+		m := Move{}
+		m.add(Square{x: 4, y: 3, stone: player})
+		moves = append(moves, m)
 	}
-	if b.Square(3, 4).stone == "0" {
-		moves = append(moves, Move{
-			[]Square{Square{x: 3, y: 4, stone: player}},
-		})
+	if b.Square(3, 4).stone == 0 {
+		m := Move{}
+		m.add(Square{x: 3, y: 4, stone: player})
+		moves = append(moves, m)
 	}
-	if b.Square(4, 4).stone == "0" {
-		moves = append(moves, Move{
-			[]Square{Square{x: 4, y: 4, stone: player}},
-		})
+	if b.Square(4, 4).stone == 0 {
+		m := Move{}
+		m.add(Square{x: 4, y: 4, stone: player})
+		moves = append(moves, m)
 	}
 	if len(moves) > 0 {
 		return moves
@@ -139,10 +153,11 @@ func (b *Board) ValidMoves() []Move {
 	for x := 0; x < 8; x++ {
 		for y := 0; y < 8; y++ {
 			s := b.Square(x, y)
-			if s.stone != "0" {
+			if s.stone != 0 {
 				continue
 			}
-			m := Move{[]Square{Square{x: x, y: y, stone: player}}}
+			m := Move{}
+			m.add(Square{x: x, y: y, stone: player})
 			valid := false
 			//get adjcent rays
 			rays := s.Adj()
@@ -156,11 +171,11 @@ func (b *Board) ValidMoves() []Move {
 						//this is a valid move
 						valid = true
 						for _, s := range r.Squares(player) {
-							m.squares = append(m.squares, s)
+							m.add(s)
 						}
 						break
 					}
-					if piece == "0" {
+					if piece == 0 {
 						//this is not a valid move
 						break
 					}
@@ -177,10 +192,10 @@ func (b *Board) ValidMoves() []Move {
 }
 
 func (b *Board) Value() int {
-	enemy := "1"
+	enemy := 1
 	player := b.turn
-	if player == "1" {
-		enemy = "2"
+	if player == 1 {
+		enemy = 2
 	}
 	score := 0
 	piceCount := 0
@@ -190,10 +205,16 @@ func (b *Board) Value() int {
 			if s == b.turn {
 				score++
 			}
-			if s != "0" {
+			if s != 0 {
 				piceCount++
 			}
 		}
+	}
+	if piceCount == 64 {
+		if score > 32 {
+			return 1000000
+		}
+		return -1000000
 	}
 	b.turn = player
 	plen := len(b.ValidMoves())
@@ -252,10 +273,10 @@ func (b *Board) Value() int {
 		exs += 8
 	}
 	// fmt.Printf("mlen: %d, nlen:%d, corner:%d, bcorner:%d, xs: %d, xsp: %d\n", mlen, nlen, corner, bcorner, xs, xsp)
-	if piceCount > 20 {
+	if piceCount > 10 {
 		return plen - elen - pxs + exs + pcorner - ecorner
 	}
-	if piceCount > 40 {
+	if piceCount > 32 {
 		return 2*pcorner + 2*ecorner + score
 	}
 
@@ -264,11 +285,10 @@ func (b *Board) Value() int {
 }
 
 func NewBoard(b *Board) Board {
-	newB := make([]string, 64)
-	copy(newB, b.layout)
-	newTurn := "1"
-	if b.turn == "1" {
-		newTurn = "2"
+	newB := b.layout
+	newTurn := 1
+	if b.turn == 1 {
+		newTurn = 2
 	}
 	return Board{
 		layout: newB,
@@ -276,7 +296,7 @@ func NewBoard(b *Board) Board {
 	}
 }
 
-func ScoreMove(b *Board, player string, depth int) int {
+func ScoreMove(b *Board, player int, currentBest int, depth int) int {
 	if depth == 0 {
 		return b.Value()
 	}
@@ -291,20 +311,23 @@ func ScoreMove(b *Board, player string, depth int) int {
 	moves := b.ValidMoves()
 	if len(moves) == 0 {
 		// fmt.Printf(" - No boards to look at for %s\n", b)
-		score := ScoreMove(b, player, 0)
+		score := b.Value()
 		return score
 	}
 	for _, m := range moves {
 		nb := NewBoard(b)
 		nb.Move(m)
-		score := ScoreMove(&nb, player, depth)
+		score := ScoreMove(&nb, player, ret, depth)
 		// fmt.Printf(" - Looking at board: %s\n - score: %d\n", nb, score)
-		//Max
 		if max {
 			if score > ret {
 				ret = score
 			}
 		} else {
+			//Alpha Beta pruning
+			if score < currentBest {
+				break
+			}
 			if score < ret {
 				ret = score
 			}
@@ -316,13 +339,13 @@ func ScoreMove(b *Board, player string, depth int) int {
 func findMove(b *Board, depth int) Move {
 	best := -1000000
 	moves := b.ValidMoves()
-	move := Move{ //pick a random move if we can't find a valid one
-		[]Square{Square{
-			x:     rand.Intn(7),
-			y:     rand.Intn(7),
-			stone: b.turn,
-		}},
-	}
+	move := Move{} //pick a random move if we can't find a valid one
+	move.add(Square{
+		x:     rand.Intn(7),
+		y:     rand.Intn(7),
+		stone: b.turn,
+	})
+
 	if len(moves) > 0 {
 		move = moves[0]
 	}
@@ -330,10 +353,10 @@ func findMove(b *Board, depth int) Move {
 		nb := NewBoard(b)
 		nb.Move(m)
 		// fmt.Printf("Start with board: %s\n", nb)
-		s := ScoreMove(&nb, b.turn, depth)
-		fmt.Printf("\n\nSCORE: %d\n\n", s)
+		s := ScoreMove(&nb, b.turn, -1000000, depth)
+		// fmt.Printf("\n\nSCORE: %d\n\n", s)
 		if s > best {
-			fmt.Printf("\n\nCHOOSE: %d\n\n", s)
+			// fmt.Printf("\n\nCHOOSE: %d\n\n", s)
 			best = s
 			move = m
 		}
