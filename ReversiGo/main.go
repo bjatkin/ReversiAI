@@ -93,12 +93,18 @@ func (client *Client) receive(myGame *Game) {
 			}
 			//convert the board
 			board := [64]int{}
+			// row := 0
 			for i, s := range data[4:68] {
 				d, err := strconv.ParseInt(s, 10, 8)
 				if err != nil {
-					fmt.Printf("Game state not updated, invalid board recieved: '%+v', Error: %s\n", data[4:68], err.Error())
+					fmt.Printf("Game state not updated, invalid board recieved: '%+v', Error: %s\n", data, err.Error())
 				}
 				board[i] = int(d)
+				// fmt.Printf("Index: %d, %d, %d\n", ((8-(i%8))+row*8)-1, i%8, row)
+				// board[63-(((8-(i%8))+row*8)-1)] = int(d)
+				// if (i+1)%8 == 0 {
+				// 	row++
+				// }
 			}
 
 			message := Message{
@@ -114,12 +120,12 @@ func (client *Client) receive(myGame *Game) {
 				turn:   message.Turn,
 				round:  message.Round,
 			}
-			// fmt.Printf("turn: %s\nround: %s\nboard: %s", message.Turn, message.Round, myGame.Board)
+			fmt.Printf("turn: %d\nround: %d\nboard: %s", message.Turn, message.Round, myGame.Board)
 		}
 	}
 }
 
-func (client *Client) SendMove(row, col int) {
+func (client *Client) SendMove(row, col, round int) {
 	now := time.Now().UnixNano()
 	if client.lastSent == 0 {
 		client.lastSent = now - client.wait - 1
@@ -131,11 +137,16 @@ func (client *Client) SendMove(row, col int) {
 	move := fmt.Sprintf("%d\n%d", row, col)
 	client.socket.Write([]byte(move)) //Send the move
 	client.socket.Write([]byte("\n")) //Finish the message
-	fmt.Printf("\nMove: (%d, %d)\n", row, col)
+	fmt.Printf("\n-------------------------------\nPlayed Move: (%d, %d) ROUND: %d\n", row, col, round)
 }
 
 func (client *Client) RequestUpdate() {
-	client.socket.Write([]byte("\n")) //Request a new simple update
+	now := time.Now().UnixNano()
+	if client.lastSent == 0 {
+		client.lastSent = now - client.wait - 1
+	}
+	client.lastSent = now
+	client.socket.Write([]byte("-1\n-1\n")) //Request a new simple update
 	fmt.Println("Requesting update from the server")
 }
 
@@ -145,7 +156,7 @@ func main() {
 	// 		0, 0, 0, 0, 0, 0, 0, 0,
 	// 		0, 0, 0, 0, 0, 0, 0, 0,
 	// 		0, 0, 0, 0, 0, 0, 0, 0,
-	// 		0, 0, 0, 2, 0, 0, 0, 0,
+	// 		0, 0, 0, 0, 0, 0, 0, 0,
 	// 		0, 0, 0, 0, 0, 0, 0, 0,
 	// 		0, 0, 0, 0, 0, 0, 0, 0,
 	// 		0, 0, 0, 0, 0, 0, 0, 0,
@@ -154,7 +165,8 @@ func main() {
 	// 	turn:  1,
 	// 	round: 1,
 	// }
-	// fmt.Printf("Moves: %+v", b.ValidMoves())
+	// findMove(&b, 2)
+	// return
 	if len(os.Args) < 3 {
 		fmt.Printf("Please specify both the address of the server and the player number\n")
 		return
@@ -170,15 +182,16 @@ func main() {
 		fmt.Printf("There was an error connecting to the server: %s\n", err.Error())
 		return
 	}
-
 	sec := 1000000000.0 //one second in nano seconds
 	client := &Client{socket: connection, wait: int64(0.01 * sec)}
 	myGame := Game{}
 	go client.receive(&myGame)
 	timeout := int64(5 * sec)
+	currentRound := 1
 	for {
 		if time.Now().UnixNano()-client.lastSent > timeout && client.lastSent != 0 {
 			client.RequestUpdate() //need to jog the server
+			currentRound++
 		}
 		if myGame.GameOver {
 			fmt.Println("Game Over")
@@ -186,10 +199,13 @@ func main() {
 		}
 
 		//Right now this is where the logic to send a turn lives, this is porbably no where it should live
-		if myGame.Board.turn == myGame.PlayerNum && myGame.Ack && !myGame.GameOver {
-			fmt.Printf("Calculateing move...\n")
-			move := findMove(&myGame.Board, 4)
-			client.SendMove(move.squares[0].x, move.squares[0].y)
+		if myGame.Board.turn == myGame.PlayerNum && myGame.Ack && !myGame.GameOver && myGame.Board.round == currentRound {
+			fmt.Printf("Search for a round %d move\n", currentRound)
+			nb := NewBoard(&myGame.Board) //do this to prevent weird errors with the board updating
+			nb.turn = myGame.PlayerNum
+			move := findMove(&nb, 7)
+			client.SendMove(move.squares[0].x, move.squares[0].y, currentRound)
+			currentRound += 2
 		}
 	}
 }
