@@ -335,6 +335,7 @@ func ScoreMove(b *Board, player int, currentBest int, depth int) int {
 	}
 
 	// forward-ish pruning for deeper searches
+	var boards []Board
 	if len(moves) > 4 {
 		sortBoards := []Board{}
 		for _, m := range moves {
@@ -344,37 +345,19 @@ func ScoreMove(b *Board, player int, currentBest int, depth int) int {
 		}
 		sort.Sort(ByScore(sortBoards))
 
-		sb := sortBoards[:4] //Take the top 4 boards
+		boards = sortBoards[:4] //Take the top 4 boards
 		if !max {
-			sb = sortBoards[len(sortBoards)-4:] //Take the bottom 4 boards
+			boards = sortBoards[len(sortBoards)-4:] //Take the bottom 4 boards
 		}
-		for _, nb := range sb {
-			score := ScoreMove(&nb, player, ret, depth)
-			if max {
-				if score > ret {
-					ret = score
-				}
-				//Alpha Beta pruning
-				if score > currentBest {
-					break
-				}
-			} else {
-				if score < ret {
-					ret = score
-				}
-				//Alpha Beta pruning
-				if score < currentBest {
-					break
-				}
-			}
+	} else {
+		for _, m := range moves {
+			nb := NewBoard(b)
+			nb.Move(m)
+			boards = append(boards, nb)
 		}
-
-		return ret
 	}
 
-	for _, m := range moves {
-		nb := NewBoard(b)
-		nb.Move(m)
+	for _, nb := range boards {
 		score := ScoreMove(&nb, player, ret, depth)
 		if max {
 			if score > ret {
