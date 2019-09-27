@@ -164,8 +164,14 @@ func main() {
 
 	fmt.Printf("connecting to the Reversi server @ %s...\n", os.Args[1])
 	port, err := strconv.Atoi(os.Args[2])
-	if err != nil {
+	if err != nil || port < 0 || port > 2 {
 		fmt.Printf("Player number must be 1 or 2: %s", err.Error())
+		return
+	}
+	depth, err := strconv.Atoi(os.Args[3])
+	if err != nil || depth < 0 {
+		fmt.Printf("Depth must be a positive number: %s", err.Error())
+		return
 	}
 	connection, err := net.Dial("tcp", fmt.Sprintf("%s:%d", os.Args[1], 3333+port))
 	if err != nil {
@@ -198,7 +204,7 @@ func main() {
 			fmt.Printf("Search for a round %d move\n", currentRound)
 			nb := NewBoard(&myGame.Board) //do this to prevent weird errors with the board updating
 			nb.turn = myGame.PlayerNum
-			move := findMove(&nb, 5)
+			move := findMove(&nb, depth)
 			fmt.Printf("Here is my move x: %d, y: %d\n", move.squares[0].x, move.squares[0].y)
 			client.SendMove(move.squares[0].x, move.squares[0].y, currentRound)
 			currentRound += 2

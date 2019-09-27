@@ -315,6 +315,10 @@ func (b ByScore) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b ByScore) Less(i, j int) bool { return b[i].Value() < b[j].Value() }
 
 func ScoreMove(b *Board, player int, currentBest int, depth int) int {
+	if depth <= 0 {
+		b.turn = player
+		return b.Value()
+	}
 	depth--
 
 	var ret int
