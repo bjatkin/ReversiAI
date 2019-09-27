@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"sort"
 	"strconv"
 )
@@ -74,7 +73,7 @@ type Move struct {
 }
 
 func (m Move) String() string {
-	return fmt.Sprintf("%v", m.squares[:m.index])
+	return fmt.Sprintf("(x: %d, y: %d)", m.squares[0].x, m.squares[0].y)
 }
 
 func (m *Move) add(squares ...Square) {
@@ -160,7 +159,6 @@ func (b *Board) ValidMoves() []Move {
 		return moves
 	}
 
-	// fmt.Printf("Player: %d, Enemy: %d\n", player, enemy)
 	for x := 0; x < 8; x++ {
 		for y := 0; y < 8; y++ {
 			s := b.Square(x, y)
@@ -217,21 +215,21 @@ func (b *Board) Value() int {
 				pscore++
 			}
 			if s == enemy {
-				pscore++
+				escore++
 			}
 		}
 	}
 	if pscore+escore == 64 {
 		if pscore > 32 {
-			return 1000000
+			return 1000000 //You Win!
 		}
-		return -1000000
+		return -1000000 //You Loose :(
 	}
 	if pscore == 0 {
-		return -1000000
+		return -1000000 //You Loose :(
 	}
 	if escore == 0 {
-		return 1000000
+		return 1000000 //You Win!
 	}
 	b.turn = player
 	plen := len(b.ValidMoves())
@@ -289,15 +287,14 @@ func (b *Board) Value() int {
 	if b.Square(6, 1).stone == enemy {
 		exs++
 	}
-	// fmt.Printf("mlen: %d, nlen:%d, corner:%d, bcorner:%d, xs: %d, xsp: %d\n", mlen, nlen, corner, bcorner, xs, xsp)
-	if pscore+escore < 10 {
-		return plen - elen - 5*pxs + 3*exs + 3*pcorner - 5*ecorner - 2*pscore
+	if pscore+escore < 16 {
+		return plen - elen - 100*(pxs-pcorner) + 3*exs + 30*(pcorner-ecorner) - 2*pscore
 	}
-	if pscore+escore < 20 {
-		return plen - elen - 5*pxs + 6*exs + 5*pcorner - 3*ecorner
+	if pscore+escore < 30 {
+		return plen - elen - 100*(pxs-pcorner) + 6*exs + 50*(pcorner-ecorner) - pscore
 	}
 	if pscore+escore < 48 {
-		return 6*exs - 6*pxs + 6*pcorner - 6*ecorner - pscore
+		return 50*(pcorner-ecorner) - 100*(pxs-pcorner) + pscore
 	}
 
 	return pscore - escore
@@ -318,10 +315,6 @@ func (b ByScore) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b ByScore) Less(i, j int) bool { return b[i].Value() < b[j].Value() }
 
 func ScoreMove(b *Board, player int, currentBest int, depth int) int {
-	if depth == 0 {
-		b.turn = player
-		return b.Value()
-	}
 	depth--
 
 	var ret int
@@ -332,14 +325,13 @@ func ScoreMove(b *Board, player int, currentBest int, depth int) int {
 	}
 	moves := b.ValidMoves()
 	if len(moves) == 0 {
-		// fmt.Printf(" - No boards to look at for %s\n", b)
 		b.turn = player
 		score := b.Value()
 		return score
 	}
-	// forward pruning for deeper searches
+
+	// forward-ish pruning for deeper searches
 	if len(moves) > 4 {
-		// fmt.Printf("More than 4 possible moves (%d) forward pruning...\n", len(moves))
 		sortBoards := []Board{}
 		for _, m := range moves {
 			nb := NewBoard(b)
@@ -348,19 +340,27 @@ func ScoreMove(b *Board, player int, currentBest int, depth int) int {
 		}
 		sort.Sort(ByScore(sortBoards))
 
-		for _, nb := range sortBoards[:4] {
+		sb := sortBoards[:4] //Take the top 4 boards
+		if !max {
+			sb = sortBoards[len(sortBoards)-4:] //Take the bottom 4 boards
+		}
+		for _, nb := range sb {
 			score := ScoreMove(&nb, player, ret, depth)
 			if max {
 				if score > ret {
 					ret = score
 				}
+				//Alpha Beta pruning
+				if score > currentBest {
+					break
+				}
 			} else {
+				if score < ret {
+					ret = score
+				}
 				//Alpha Beta pruning
 				if score < currentBest {
 					break
-				}
-				if score < ret {
-					ret = score
 				}
 			}
 		}
@@ -372,63 +372,47 @@ func ScoreMove(b *Board, player int, currentBest int, depth int) int {
 		nb := NewBoard(b)
 		nb.Move(m)
 		score := ScoreMove(&nb, player, ret, depth)
-		// fmt.Printf(" - Looking at board: %s - score: %d - ret: %d\n", nb, score, ret)
 		if max {
 			if score > ret {
 				ret = score
 			}
 			//Alpha Beta pruning
 			if score > currentBest {
-				// fmt.Printf("max pruned future leaves score: %d, currentBest: %d\n", score, currentBest)
 				break
 			}
-			// fmt.Printf("current Score Max: %d/ Best: %d\n\n", ret, currentBest)
 		} else {
 			if score < ret {
 				ret = score
 			}
 			//Alpha Beta pruning
 			if score < currentBest {
-				// fmt.Printf("min pruned future leaves score: %d, currentBest: %d\n", score, currentBest)
 				break
 			}
-			// fmt.Printf("current Score Min: %d/ Best: %d\n\n", ret, currentBest)
 		}
 	}
 	return ret
 }
 
 func findMove(b *Board, depth int) Move {
-	best := -1000000
+	best := -100000000000
 	moves := b.ValidMoves()
-	// fmt.Printf("Board: %s\nValid: %v\n", *b, moves)
-	move := Move{} //pick a random move if we can't find a valid one
-	move.add(Square{
-		x:     rand.Intn(7),
-		y:     rand.Intn(7),
-		stone: b.turn,
-	})
+	move := Move{}
 
 	if len(moves) == 0 {
-		// fmt.Printf("PLAYING A RANDOM MOVE SO SOME STUFF MIGHT BLOW UP HERE!!!!!!!\n")
+		fmt.Printf("I forfit my turn\n")
 		return move
 	}
 	if len(moves) == 1 {
 		return moves[0]
 	}
-	// fmt.Printf("Top Board: %s", *b)
 	for _, m := range moves {
 		nb := NewBoard(b)
 		nb.Move(m)
-		// fmt.Printf("Start with board: %s\nMove: %v\n", nb, m)
-		s := ScoreMove(&nb, b.turn, -1000000, depth)
-		// fmt.Printf("\n\nSCORE: %d\n\n", s)
+		s := ScoreMove(&nb, b.turn, -100000000000, depth)
 		if s > best {
-			// fmt.Printf("\n\nCHOOSE: %d\n\n", s)
 			best = s
 			move = m
 		}
 	}
-	// fmt.Printf("Best: %d\n\n", best)
 	return move
 }

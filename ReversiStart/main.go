@@ -34,7 +34,7 @@ func main() {
 	win := 0
 	loss := 0
 	tie := 0
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 10; i++ {
 		score := runServer()
 		if score == 1 {
 			win++
@@ -108,11 +108,14 @@ func runServer() int {
 				if len(arr) < 9 {
 					continue
 				}
-				// fmt.Printf("Arr: %#v", arr)
-				pid := arr[1]
-				process1, process2 := arr[7], arr[8]
+				process1, process2, process3 := arr[7], arr[8], arr[6]
 				if process1 == "/usr/bin/java" && process2 == "Reversi" {
-					proc = pid
+					proc = arr[1]
+					break
+				}
+
+				if process3 == "/usr/bin/java" && process1 == "Reversi" {
+					proc = arr[0]
 					break
 				}
 			}
@@ -120,7 +123,10 @@ func runServer() int {
 			if proc == "" {
 				fmt.Println("The proccess could not be found!")
 				return 0
+			} else {
+				fmt.Printf("Killing proc %s\n", proc)
 			}
+
 			exec.Command("kill", proc).Run()
 			return score
 		}

@@ -10,10 +10,12 @@ import (
 )
 
 type Client struct {
-	socket   net.Conn
-	data     chan []byte
-	lastSent int64
-	wait     int64
+	socket       net.Conn
+	data         chan []byte
+	lastSent     int64
+	lastUpdate   int64
+	messageCount int64
+	wait         int64
 }
 
 type Message struct {
@@ -45,6 +47,7 @@ func (client *Client) receive(myGame *Game) {
 
 		//We got some incomming data
 		if length > 0 {
+			client.messageCount++
 			fmt.Println("reciving message")
 			data := strings.Split(string(message), "\n")
 			if !myGame.Ack {
@@ -63,6 +66,7 @@ func (client *Client) receive(myGame *Game) {
 					break
 				}
 				myGame.Ack = true
+				fmt.Printf("My Player: %d\nGame Time: %f\n", myGame.PlayerNum, myGame.Time)
 				continue
 			}
 
@@ -120,6 +124,8 @@ func (client *Client) receive(myGame *Game) {
 				turn:   message.Turn,
 				round:  message.Round,
 			}
+
+			client.lastUpdate = time.Now().UnixNano()
 			fmt.Printf("turn: %d\nround: %d\nboard: %s", message.Turn, message.Round, myGame.Board)
 		}
 	}
@@ -142,31 +148,15 @@ func (client *Client) SendMove(row, col, round int) {
 
 func (client *Client) RequestUpdate() {
 	now := time.Now().UnixNano()
-	if client.lastSent == 0 {
-		client.lastSent = now - client.wait - 1
+	if client.lastUpdate == 0 {
+		client.lastUpdate = now - client.wait - 1
 	}
-	client.lastSent = now
+	client.lastUpdate = now
 	client.socket.Write([]byte("-1\n-1\n")) //Request a new simple update
 	fmt.Println("Requesting update from the server")
 }
 
 func main() {
-	// b := Board{
-	// 	layout: [64]int{
-	// 		0, 0, 0, 0, 0, 0, 0, 0,
-	// 		0, 0, 0, 0, 0, 0, 0, 0,
-	// 		0, 0, 0, 0, 0, 0, 0, 0,
-	// 		0, 0, 0, 0, 0, 0, 0, 0,
-	// 		0, 0, 0, 0, 0, 0, 0, 0,
-	// 		0, 0, 0, 0, 0, 0, 0, 0,
-	// 		0, 0, 0, 0, 0, 0, 0, 0,
-	// 		0, 0, 0, 0, 0, 0, 0, 0,
-	// 	},
-	// 	turn:  1,
-	// 	round: 1,
-	// }
-	// findMove(&b, 2)
-	// return
 	if len(os.Args) < 3 {
 		fmt.Printf("Please specify both the address of the server and the player number\n")
 		return
@@ -186,24 +176,30 @@ func main() {
 	client := &Client{socket: connection, wait: int64(0.01 * sec)}
 	myGame := Game{}
 	go client.receive(&myGame)
-	timeout := int64(5 * sec)
+	timeout := int64(1 * sec)
 	currentRound := 1
+	if port == 1 {
+		currentRound = 0
+	}
 	for {
-		if time.Now().UnixNano()-client.lastSent > timeout && client.lastSent != 0 {
+		if time.Now().UnixNano()-client.lastUpdate > timeout && client.lastUpdate != 0 {
 			client.RequestUpdate() //need to jog the server
-			currentRound++
+			if myGame.Board.round != currentRound {
+				currentRound = myGame.Board.round
+				fmt.Printf("updating current round to %d, to match %d\n", currentRound, myGame.Board.round)
+			}
 		}
 		if myGame.GameOver {
-			fmt.Println("Game Over")
+			fmt.Println("Game Over\n")
 			return
 		}
-
 		//Right now this is where the logic to send a turn lives, this is porbably no where it should live
 		if myGame.Board.turn == myGame.PlayerNum && myGame.Ack && !myGame.GameOver && myGame.Board.round == currentRound {
 			fmt.Printf("Search for a round %d move\n", currentRound)
 			nb := NewBoard(&myGame.Board) //do this to prevent weird errors with the board updating
 			nb.turn = myGame.PlayerNum
-			move := findMove(&nb, 7)
+			move := findMove(&nb, 5)
+			fmt.Printf("Here is my move x: %d, y: %d\n", move.squares[0].x, move.squares[0].y)
 			client.SendMove(move.squares[0].x, move.squares[0].y, currentRound)
 			currentRound += 2
 		}
