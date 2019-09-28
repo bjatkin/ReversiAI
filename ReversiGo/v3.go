@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"sort"
 	"strconv"
 )
@@ -201,6 +202,7 @@ func (b *Board) ValidMoves() []Move {
 }
 
 func (b *Board) Value() int {
+	return rand.Intn(30)
 	enemy := 1
 	player := b.turn
 	if player == 1 {
@@ -315,11 +317,11 @@ func (b ByScore) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b ByScore) Less(i, j int) bool { return b[i].Value() < b[j].Value() }
 
 func ScoreMove(b *Board, player int, currentBest int, depth int) int {
+	depth--
 	if depth <= 0 {
 		b.turn = player
 		return b.Value()
 	}
-	depth--
 
 	var ret int
 	ret = 1000000
@@ -357,14 +359,17 @@ func ScoreMove(b *Board, player int, currentBest int, depth int) int {
 		}
 	}
 
+	// fmt.Printf("--- depth: %d, Moves: %d --- \n", depth, len(moves))
 	for _, nb := range boards {
 		score := ScoreMove(&nb, player, ret, depth)
+		// fmt.Printf(" - score(%d): %d\n", i, score)
 		if max {
 			if score > ret {
 				ret = score
 			}
 			//Alpha Beta pruning
-			if score > currentBest {
+			if score >= currentBest {
+				// fmt.Printf("Pruned %d, becuase it's >= %d\n", score, currentBest)
 				break
 			}
 		} else {
@@ -372,7 +377,8 @@ func ScoreMove(b *Board, player int, currentBest int, depth int) int {
 				ret = score
 			}
 			//Alpha Beta pruning
-			if score < currentBest {
+			if score <= currentBest {
+				// fmt.Printf("Pruned %d, becuase it's <= %d\n", score, currentBest)
 				break
 			}
 		}
@@ -395,7 +401,7 @@ func findMove(b *Board, depth int) Move {
 	for _, m := range moves {
 		nb := NewBoard(b)
 		nb.Move(m)
-		s := ScoreMove(&nb, b.turn, -100000000000, depth)
+		s := ScoreMove(&nb, b.turn, 100000000000, depth)
 		if s > best {
 			best = s
 			move = m
