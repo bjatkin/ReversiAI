@@ -79,7 +79,6 @@ func findMove(b *rb.Board, player int, searchTime time.Duration) (rb.Move, bool)
 	max := rb.MinScore - 1
 	move := moves[0]
 	for i, m := range moves {
-		fmt.Printf("-------------Calculated %d Positions---------------\n", rb.PositionsCalculated)
 		score := <-scores[i]
 		if score > max {
 			max = score

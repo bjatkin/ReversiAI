@@ -127,10 +127,8 @@ type boardStats struct {
 	stoneCount int
 	frontier   int
 	sweet16    int
-	nEdge      int
-	sEdge      int
-	eEdge      int
-	wEdge      int
+	top4       int
+	edges      int
 	corner     int
 	mobility   int
 	xSquares   int
@@ -138,14 +136,7 @@ type boardStats struct {
 	bSquares   int
 }
 
-func TestValue(b Board, player int) int {
-	return b.value(player)
-}
-
-var PositionsCalculated int
-
 func (b Board) value(player int) int {
-	PositionsCalculated++
 	playerStats := boardStats{}
 	turn := 0
 
@@ -168,13 +159,61 @@ func (b Board) value(player int) int {
 			if squ.is(corner) {
 				playerStats.corner++
 			}
+			if squ.is(top4) {
+				playerStats.top4++
+			}
+			if squ.is(edge) {
+				playerStats.edges++
+			}
+			if squ.isFrontier(&b) {
+				playerStats.frontier++
+			}
 		}
 	}
+	playerStats.mobility = len(b.ValidMoves(player))
 
-	if turn < 5 {
+	if turn < 5 { //End game
 		return playerStats.stoneCount
 	}
-	return -playerStats.stoneCount + playerStats.sweet16 - 5*(playerStats.xSquares-playerStats.corner) + playerStats.corner
+
+	if turn > 40 { //Early Game
+		return -playerStats.stoneCount +
+			playerStats.mobility +
+			5*playerStats.top4 +
+			playerStats.sweet16 +
+			-playerStats.edges +
+			-playerStats.frontier +
+			-500*playerStats.xSquares
+	}
+
+	return -playerStats.stoneCount +
+		playerStats.sweet16 +
+		playerStats.top4 +
+		-500*(playerStats.xSquares-playerStats.corner) +
+		3*playerStats.corner +
+		-3*playerStats.frontier
+}
+
+var edge = []square{
+	square{x: 0, y: 2},
+	square{x: 0, y: 3},
+	square{x: 0, y: 4},
+	square{x: 0, y: 5},
+
+	square{x: 7, y: 2},
+	square{x: 7, y: 3},
+	square{x: 7, y: 4},
+	square{x: 7, y: 5},
+
+	square{x: 2, y: 0},
+	square{x: 3, y: 0},
+	square{x: 4, y: 0},
+	square{x: 5, y: 0},
+
+	square{x: 2, y: 7},
+	square{x: 3, y: 7},
+	square{x: 4, y: 7},
+	square{x: 5, y: 7},
 }
 
 var corner = []square{
@@ -183,6 +222,14 @@ var corner = []square{
 	square{x: 7, y: 7},
 	square{x: 0, y: 7},
 }
+
+var top4 = []square{
+	square{x: 4, y: 4},
+	square{x: 3, y: 3},
+	square{x: 4, y: 3},
+	square{x: 3, y: 4},
+}
+
 var sweet16 = []square{
 	square{x: 2, y: 2},
 	square{x: 2, y: 3},
@@ -215,6 +262,16 @@ var xSquare = []square{
 func (s square) is(squares []square) bool {
 	for _, squ := range squares {
 		if s.x == squ.x && s.y == squ.y {
+			return true
+		}
+	}
+	return false
+}
+
+func (s square) isFrontier(b *Board) bool {
+	adj := s.adj()
+	for _, ray := range adj {
+		if b.square(ray.destx, ray.desty).stone == 0 {
 			return true
 		}
 	}
