@@ -37,7 +37,7 @@ func main() {
 			if message.Turn == player {
 				//Get all the valid moves in the current board state
 				board := rb.Board(message.Board)
-				move, pass := findMove(&board, player, 10*time.Millisecond)
+				move, pass := findMove(&board, player, 5000*time.Millisecond)
 				if pass {
 					break //We have no valid moves
 				}
@@ -65,32 +65,28 @@ func findMove(b *rb.Board, player int, searchTime time.Duration) (rb.Move, bool)
 		stops = append(stops, make(chan bool, 1))
 		scores = append(scores, make(chan int, 1))
 		nb := b.Move(m)
-		go rb.ValueBoard(&nb, player, 0, stops[i], scores[i])
+		go rb.ValueBoard(&nb, player, 0, rb.MaxScore+1, stops[i], scores[i])
 	}
 
-	// time.Sleep(searchTime)
+	time.Sleep(searchTime)
 
 	//Stop all the go routines and have them head back up
 	for i := 0; i < len(moves); i++ {
-		stops[i] <- true
+		close(stops[i])
 	}
 
 	//Find the best scoring move
 	max := rb.MinScore - 1
 	move := moves[0]
 	for i, m := range moves {
-		fmt.Printf("Getting score from [%d]\n", i)
 		fmt.Printf("-------------Calculated %d Positions---------------\n", rb.PositionsCalculated)
 		score := <-scores[i]
 		if score > max {
 			max = score
 			move = m
 		}
-		close(stops[i])
 		close(scores[i])
 	}
-
-	// rb.PositionsCalculated = 0
 
 	return move, false
 }

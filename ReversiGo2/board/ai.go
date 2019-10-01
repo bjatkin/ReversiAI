@@ -1,46 +1,53 @@
 package board
 
-var PositionsCalculated int
+import (
+	"sort"
+)
 
 //ValueBoard calculates a boards value using minimax and the Board.value() function
-func ValueBoard(b *Board, player, depth, currentBest int, stop chan bool, value chan int) int {
+func ValueBoard(b *Board, player, depth, currentBest int, stop chan bool, value chan int) (int, bool) {
 	select {
-	case _, open := <-stop:
-		if !open {
-			return 0
-		}
-		//we've reached max depth, calculate up from here
-		PositionsCalculated++
-		score := b.value(player)
+	case <-stop:
 		if depth == 0 {
+			score := b.value(player)
 			value <- score
+			return score, true
 		}
-		return score
+		return 0, false
 	default:
 		//Keep moving down the tree, we havent been stoped yet
-
 		var target int
+		var prune bool
 		moves := b.ValidMoves(player)
-		if depth%3 == 0 {
-			scores, moves := prune(b, moves, player)
+		if len(moves) == 0 {
+			score := b.value(player)
+			if depth == 0 {
+				value <- score
+			}
+			return score, true
 		}
 
-		newCurrentBest := currentBest
-		for i, move := range moves {
-			nb := b.Move(move)
-			score := ValueBoard(&nb, player, depth+1, newCurrentBest, stop, value)
+		nextCurrentBest := currentBest
+		prunedMoves := pruneMoves(b, moves, depth, player, 4)
+
+		for i, move := range prunedMoves {
+			nb := move.board
+			score, calculated := ValueBoard(nb, player, depth+1, nextCurrentBest, stop, value)
+			if !calculated {
+				score = move.score
+			}
 			target = miniMax(depth, score, target, i)
+			nextCurrentBest, prune = alphBetaPrune(depth, currentBest, nextCurrentBest, score)
+			if prune { //We can stop searching due to alpha beta pruning
+				break
+			}
 		}
 
 		if depth == 0 {
 			value <- target
 		}
 
-		if len(moves) == 0 {
-			PositionsCalculated++
-			return b.value(player)
-		}
-		return target
+		return target, true
 	}
 }
 
@@ -52,19 +59,66 @@ func miniMax(depth, score, target, i int) int {
 	if depth%2 == 0 && score < target { //Min
 		return score
 	}
-	if score > target { //Max
+	if depth%2 != 0 && score > target { //Max
 		return score
 	}
 	return target
 }
 
-func prune(b *Board, moves []Move, player int) ([]int, []Move) {
-	scores := []int{}
+type valueBoard struct {
+	board *Board
+	move  *Move
+	score int
+}
+
+type byScore []valueBoard
+
+func (a byScore) Len() int           { return len(a) }
+func (a byScore) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byScore) Less(i, j int) bool { return a[i].score < a[j].score }
+
+func pruneMoves(b *Board, moves []Move, depth, player, max int) []valueBoard {
+	ret := []valueBoard{}
 	for _, move := range moves {
 		nb := b.Move(move)
-		scores = append(scores, nb.value(player))
+		score := nb.value(player)
+		ret = append(ret, valueBoard{&nb, &move, score})
 	}
-	return scores, moves
+	if max == 0 || len(ret) <= max {
+		return ret
+	}
+
+	//Sort the valueBoards
+	sort.Sort(byScore(ret))
+
+	//Min layer so return the min
+	if depth%2 == 0 {
+		return ret[:max]
+	}
+
+	//Max layer so return the max
+	return ret[len(ret)-max:]
+}
+
+func alphBetaPrune(depth, currentBest, nextCurrentBest, score int) (int, bool) {
+	//adjust the currentBestValue
+	if depth%2 == 0 && currentBest == MaxScore+1 {
+		currentBest = MinScore - 1
+	}
+
+	//I'm min and above/ bellow is a max
+	if depth%2 == 0 && score < currentBest {
+		return 0, true //Prune all remaining nodes
+	}
+	if depth%2 == 0 {
+		return score, false
+	}
+
+	//I'm a max and above/ bellow is a min
+	if depth%2 != 0 && score > currentBest {
+		return 0, true
+	}
+	return score, false
 }
 
 type boardStats struct {
@@ -88,7 +142,10 @@ func TestValue(b Board, player int) int {
 	return b.value(player)
 }
 
+var PositionsCalculated int
+
 func (b Board) value(player int) int {
+	PositionsCalculated++
 	playerStats := boardStats{}
 	turn := 0
 
