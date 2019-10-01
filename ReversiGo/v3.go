@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"sort"
 	"strconv"
 )
@@ -140,23 +139,24 @@ func (b *Board) ValidMoves() []Move {
 		m := Move{}
 		m.add(Square{x: 3, y: 3, stone: player})
 		moves = append(moves, m)
+		return moves
 	}
 	if b.Square(4, 3).stone == 0 {
 		m := Move{}
 		m.add(Square{x: 4, y: 3, stone: player})
 		moves = append(moves, m)
+		return moves
 	}
 	if b.Square(3, 4).stone == 0 {
 		m := Move{}
 		m.add(Square{x: 3, y: 4, stone: player})
 		moves = append(moves, m)
+		return moves
 	}
 	if b.Square(4, 4).stone == 0 {
 		m := Move{}
 		m.add(Square{x: 4, y: 4, stone: player})
 		moves = append(moves, m)
-	}
-	if len(moves) > 0 {
 		return moves
 	}
 
@@ -202,7 +202,6 @@ func (b *Board) ValidMoves() []Move {
 }
 
 func (b *Board) Value() int {
-	return rand.Intn(30)
 	enemy := 1
 	player := b.turn
 	if player == 1 {
