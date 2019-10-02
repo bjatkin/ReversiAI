@@ -142,11 +142,11 @@ func (b Board) value(player int) int {
 
 	for x := 0; x < 8; x++ {
 		for y := 0; y < 8; y++ {
-			squ := b.square(x, y)
-			if squ.stone == 0 {
+			squ := b.Square(x, y)
+			if squ.Stone == 0 {
 				turn++
 			}
-			if squ.stone != player {
+			if squ.Stone != player {
 				continue
 			}
 			playerStats.stoneCount++
@@ -194,72 +194,72 @@ func (b Board) value(player int) int {
 		-3*playerStats.frontier
 }
 
-var edge = []square{
-	square{x: 0, y: 2},
-	square{x: 0, y: 3},
-	square{x: 0, y: 4},
-	square{x: 0, y: 5},
+var edge = []Square{
+	Square{x: 0, y: 2},
+	Square{x: 0, y: 3},
+	Square{x: 0, y: 4},
+	Square{x: 0, y: 5},
 
-	square{x: 7, y: 2},
-	square{x: 7, y: 3},
-	square{x: 7, y: 4},
-	square{x: 7, y: 5},
+	Square{x: 7, y: 2},
+	Square{x: 7, y: 3},
+	Square{x: 7, y: 4},
+	Square{x: 7, y: 5},
 
-	square{x: 2, y: 0},
-	square{x: 3, y: 0},
-	square{x: 4, y: 0},
-	square{x: 5, y: 0},
+	Square{x: 2, y: 0},
+	Square{x: 3, y: 0},
+	Square{x: 4, y: 0},
+	Square{x: 5, y: 0},
 
-	square{x: 2, y: 7},
-	square{x: 3, y: 7},
-	square{x: 4, y: 7},
-	square{x: 5, y: 7},
+	Square{x: 2, y: 7},
+	Square{x: 3, y: 7},
+	Square{x: 4, y: 7},
+	Square{x: 5, y: 7},
 }
 
-var corner = []square{
-	square{x: 0, y: 0},
-	square{x: 7, y: 0},
-	square{x: 7, y: 7},
-	square{x: 0, y: 7},
+var corner = []Square{
+	Square{x: 0, y: 0},
+	Square{x: 7, y: 0},
+	Square{x: 7, y: 7},
+	Square{x: 0, y: 7},
 }
 
-var top4 = []square{
-	square{x: 4, y: 4},
-	square{x: 3, y: 3},
-	square{x: 4, y: 3},
-	square{x: 3, y: 4},
+var top4 = []Square{
+	Square{x: 4, y: 4},
+	Square{x: 3, y: 3},
+	Square{x: 4, y: 3},
+	Square{x: 3, y: 4},
 }
 
-var sweet16 = []square{
-	square{x: 2, y: 2},
-	square{x: 2, y: 3},
-	square{x: 2, y: 4},
-	square{x: 2, y: 5},
+var sweet16 = []Square{
+	Square{x: 2, y: 2},
+	Square{x: 2, y: 3},
+	Square{x: 2, y: 4},
+	Square{x: 2, y: 5},
 
-	square{x: 3, y: 2},
-	square{x: 3, y: 3},
-	square{x: 3, y: 4},
-	square{x: 3, y: 5},
+	Square{x: 3, y: 2},
+	Square{x: 3, y: 3},
+	Square{x: 3, y: 4},
+	Square{x: 3, y: 5},
 
-	square{x: 4, y: 2},
-	square{x: 4, y: 3},
-	square{x: 4, y: 4},
-	square{x: 4, y: 5},
+	Square{x: 4, y: 2},
+	Square{x: 4, y: 3},
+	Square{x: 4, y: 4},
+	Square{x: 4, y: 5},
 
-	square{x: 5, y: 2},
-	square{x: 5, y: 3},
-	square{x: 5, y: 4},
-	square{x: 5, y: 5},
+	Square{x: 5, y: 2},
+	Square{x: 5, y: 3},
+	Square{x: 5, y: 4},
+	Square{x: 5, y: 5},
 }
 
-var xSquare = []square{
-	square{x: 1, y: 1},
-	square{x: 6, y: 1},
-	square{x: 6, y: 6},
-	square{x: 1, y: 6},
+var xSquare = []Square{
+	Square{x: 1, y: 1},
+	Square{x: 6, y: 1},
+	Square{x: 6, y: 6},
+	Square{x: 1, y: 6},
 }
 
-func (s square) is(squares []square) bool {
+func (s Square) is(squares []Square) bool {
 	for _, squ := range squares {
 		if s.x == squ.x && s.y == squ.y {
 			return true
@@ -268,10 +268,10 @@ func (s square) is(squares []square) bool {
 	return false
 }
 
-func (s square) isFrontier(b *Board) bool {
+func (s Square) isFrontier(b *Board) bool {
 	adj := s.adj()
 	for _, ray := range adj {
-		if b.square(ray.destx, ray.desty).stone == 0 {
+		if b.Square(ray.destx, ray.desty).Stone == 0 {
 			return true
 		}
 	}

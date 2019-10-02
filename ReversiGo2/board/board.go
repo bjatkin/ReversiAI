@@ -31,23 +31,24 @@ func (r *ray) step() bool {
 	return true
 }
 
-func (r *ray) squares(stone int) []square {
-	ret := []square{}
+func (r *ray) squares(stone int) []Square {
+	ret := []Square{}
 	for d := 1; d < r.steps; d++ {
-		ret = append(ret, square{
+		ret = append(ret, Square{
 			x:     r.x + d*r.dx,
 			y:     r.y + d*r.dy,
-			stone: stone,
+			Stone: stone,
 		})
 	}
 	return ret
 }
 
-type square struct {
-	x, y, stone int
+//Square is a square on the reversi board
+type Square struct {
+	x, y, Stone int
 }
 
-func (s *square) adj() []ray {
+func (s *Square) adj() []ray {
 	rays := []ray{}
 	for x := -1; x <= 1; x++ {
 		for y := -1; y <= 1; y++ {
@@ -75,14 +76,14 @@ func (s *square) adj() []ray {
 
 //Move reperesents a move on the reversi board
 type Move struct {
-	squares [64]square
+	squares [64]Square
 	index   int
 }
 
 func newMove(x, y, player int) Move {
 	ret := Move{
-		squares: [64]square{
-			square{x: x, y: y, stone: player},
+		squares: [64]Square{
+			Square{x: x, y: y, Stone: player},
 		},
 		index: 1,
 	}
@@ -100,10 +101,10 @@ func (m Move) XY() (int, int) {
 
 func (m *Move) add(r ray, player int) {
 	for d := 1; d < r.steps; d++ {
-		s := square{
+		s := Square{
 			x:     r.x + d*r.dx,
 			y:     r.y + d*r.dy,
-			stone: player,
+			Stone: player,
 		}
 		m.squares[m.index] = s
 		m.index++
@@ -119,7 +120,7 @@ func (b Board) Move(m Move) Board {
 
 	for i := 0; i < m.index; i++ {
 		m := m.squares[i]
-		nb[m.x*8+m.y] = m.stone
+		nb[m.x*8+m.y] = m.Stone
 	}
 
 	return nb
@@ -137,15 +138,16 @@ func (b Board) String() string {
 	return ret
 }
 
-func (b Board) square(x, y int) square {
+//Square returns the value at the x, y square
+func (b Board) Square(x, y int) Square {
 	if x < 0 || x > 7 || y < 0 || y > 7 {
-		return square{}
+		return Square{}
 	}
 
-	return square{
+	return Square{
 		x:     x,
 		y:     y,
-		stone: b[x*8+y],
+		Stone: b[x*8+y],
 	}
 }
 
@@ -157,23 +159,23 @@ func (b Board) ValidMoves(player int) []Move {
 	}
 
 	moves := []Move{}
-	if b.square(3, 3).stone == 0 {
+	if b.Square(3, 3).Stone == 0 {
 		return []Move{newMove(3, 3, player)}
 	}
-	if b.square(4, 3).stone == 0 {
+	if b.Square(4, 3).Stone == 0 {
 		return []Move{newMove(4, 3, player)}
 	}
-	if b.square(3, 4).stone == 0 {
-		return []Move{newMove(3, 4, player)}
-	}
-	if b.square(4, 4).stone == 0 {
+	if b.Square(4, 4).Stone == 0 {
 		return []Move{newMove(4, 4, player)}
+	}
+	if b.Square(3, 4).Stone == 0 {
+		return []Move{newMove(3, 4, player)}
 	}
 
 	for x := 0; x < 8; x++ {
 		for y := 0; y < 8; y++ {
-			squ := b.square(x, y)
-			if squ.stone != 0 {
+			squ := b.Square(x, y)
+			if squ.Stone != 0 {
 				//Move from empty squares only
 				continue
 			}
@@ -183,11 +185,11 @@ func (b Board) ValidMoves(player int) []Move {
 			//get adjcent rays
 			rays := squ.adj()
 			for _, r := range rays {
-				if b.square(r.destx, r.desty).stone != enemy {
+				if b.Square(r.destx, r.desty).Stone != enemy {
 					continue
 				}
 				for r.step() {
-					piece := b.square(r.destx, r.desty).stone
+					piece := b.Square(r.destx, r.desty).Stone
 					if piece == player {
 						//this is a valid move
 						valid = true
