@@ -3,7 +3,7 @@ package main
 import (
 	rb "Projects/School/ReversiBot/ReversiGo2/board"
 	rc "Projects/School/ReversiBot/ReversiGo2/client"
-	rg "Projects/School/ReversiBot/ReversiGo2/generate"
+	"Projects/School/ReversiBot/ReversiGo2/generate"
 	"fmt"
 	"os"
 	"strconv"
@@ -11,22 +11,7 @@ import (
 )
 
 func main() {
-	b := rb.Board{
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 1, 0, 0, 1, 0, 0,
-		2, 1, 1, 1, 1, 1, 1, 0,
-		2, 1, 1, 1, 1, 1, 1, 0,
-		2, 1, 2, 1, 2, 1, 0, 0,
-		2, 2, 1, 1, 1, 1, 1, 1,
-		2, 1, 2, 1, 1, 1, 1, 0,
-		2, 2, 2, 2, 2, 2, 2, 2,
-	}
-	start := time.Now().Unix()
-	count := 10000
-	_, win, _ := rg.SlowScoreBoard(&b, 2, count)
-	end := time.Now().Unix()
-	fmt.Printf("success rate: %f\nwins: %d\nTime(sec): %d\n", float64(win)/float64(count), win, end-start)
-
+	generate.SaveScoredPositions("games.txt", "positions.txt", 6, 15, true, "[0 0 0 2 0 0 1 0 0 0 0 2 0 1 1 2 0 0 0 2 1 1 2 0 0 0 2 1 1 2 0 0 0 2 1 1 2 0 0 0 0 0 2 1 1 0 0 0 0 2 2 2 1 0 0 0 0 0 0 0 0 0 0 0]")
 	return
 
 	if len(os.Args) < 3 {
