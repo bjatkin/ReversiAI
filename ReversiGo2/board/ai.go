@@ -9,7 +9,7 @@ func ValueBoard(b *Board, player, depth, currentBest int, stop chan bool, value 
 	select {
 	case <-stop:
 		if depth == 0 {
-			score := b.value(player)
+			score := b.Value(player)
 			value <- score
 			return score, true
 		}
@@ -20,7 +20,7 @@ func ValueBoard(b *Board, player, depth, currentBest int, stop chan bool, value 
 		var prune bool
 		moves := b.ValidMoves(player)
 		if len(moves) == 0 {
-			score := b.value(player)
+			score := b.Value(player)
 			if depth == 0 {
 				value <- score
 			}
@@ -81,7 +81,7 @@ func pruneMoves(b *Board, moves []Move, depth, player, max int) []valueBoard {
 	ret := []valueBoard{}
 	for _, move := range moves {
 		nb := b.Move(move)
-		score := nb.value(player)
+		score := nb.Value(player)
 		ret = append(ret, valueBoard{&nb, &move, score})
 	}
 	if max == 0 || len(ret) <= max {
@@ -134,146 +134,4 @@ type boardStats struct {
 	xSquares   int
 	cSquares   int
 	bSquares   int
-}
-
-func (b Board) value(player int) int {
-	playerStats := boardStats{}
-	turn := 0
-
-	for x := 0; x < 8; x++ {
-		for y := 0; y < 8; y++ {
-			squ := b.Square(x, y)
-			if squ.Stone == 0 {
-				turn++
-			}
-			if squ.Stone != player {
-				continue
-			}
-			playerStats.stoneCount++
-			if squ.is(xSquare) {
-				playerStats.xSquares++
-			}
-			if squ.is(sweet16) {
-				playerStats.sweet16++
-			}
-			if squ.is(corner) {
-				playerStats.corner++
-			}
-			if squ.is(top4) {
-				playerStats.top4++
-			}
-			if squ.is(edge) {
-				playerStats.edges++
-			}
-			if squ.isFrontier(&b) {
-				playerStats.frontier++
-			}
-		}
-	}
-	playerStats.mobility = len(b.ValidMoves(player))
-
-	if turn < 5 { //End game
-		return playerStats.stoneCount
-	}
-
-	if turn > 40 { //Early Game
-		return -playerStats.stoneCount +
-			playerStats.mobility +
-			5*playerStats.top4 +
-			playerStats.sweet16 +
-			-playerStats.edges +
-			-playerStats.frontier +
-			-500*playerStats.xSquares
-	}
-
-	return -playerStats.stoneCount +
-		playerStats.sweet16 +
-		playerStats.top4 +
-		-500*(playerStats.xSquares-playerStats.corner) +
-		3*playerStats.corner +
-		-3*playerStats.frontier
-}
-
-var edge = []Square{
-	Square{x: 0, y: 2},
-	Square{x: 0, y: 3},
-	Square{x: 0, y: 4},
-	Square{x: 0, y: 5},
-
-	Square{x: 7, y: 2},
-	Square{x: 7, y: 3},
-	Square{x: 7, y: 4},
-	Square{x: 7, y: 5},
-
-	Square{x: 2, y: 0},
-	Square{x: 3, y: 0},
-	Square{x: 4, y: 0},
-	Square{x: 5, y: 0},
-
-	Square{x: 2, y: 7},
-	Square{x: 3, y: 7},
-	Square{x: 4, y: 7},
-	Square{x: 5, y: 7},
-}
-
-var corner = []Square{
-	Square{x: 0, y: 0},
-	Square{x: 7, y: 0},
-	Square{x: 7, y: 7},
-	Square{x: 0, y: 7},
-}
-
-var top4 = []Square{
-	Square{x: 4, y: 4},
-	Square{x: 3, y: 3},
-	Square{x: 4, y: 3},
-	Square{x: 3, y: 4},
-}
-
-var sweet16 = []Square{
-	Square{x: 2, y: 2},
-	Square{x: 2, y: 3},
-	Square{x: 2, y: 4},
-	Square{x: 2, y: 5},
-
-	Square{x: 3, y: 2},
-	Square{x: 3, y: 3},
-	Square{x: 3, y: 4},
-	Square{x: 3, y: 5},
-
-	Square{x: 4, y: 2},
-	Square{x: 4, y: 3},
-	Square{x: 4, y: 4},
-	Square{x: 4, y: 5},
-
-	Square{x: 5, y: 2},
-	Square{x: 5, y: 3},
-	Square{x: 5, y: 4},
-	Square{x: 5, y: 5},
-}
-
-var xSquare = []Square{
-	Square{x: 1, y: 1},
-	Square{x: 6, y: 1},
-	Square{x: 6, y: 6},
-	Square{x: 1, y: 6},
-}
-
-func (s Square) is(squares []Square) bool {
-	for _, squ := range squares {
-		if s.x == squ.x && s.y == squ.y {
-			return true
-		}
-	}
-	return false
-}
-
-func (s Square) isFrontier(b *Board) bool {
-	adj := s.adj()
-	for _, ray := range adj {
-		if b.Square(ray.destx, ray.desty).Stone == 0 {
-			return true
-		}
-	}
-	return false
 }

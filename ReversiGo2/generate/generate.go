@@ -221,7 +221,7 @@ func SaveScoredPositions(dataFile, saveFile string, skip, maxRoutines int, appen
 			continue
 		}
 
-		board, err := boardString(line)
+		board, err := BoardString(line)
 		if err != nil {
 			fmt.Printf("Error creating board %s\n", err.Error())
 			continue
@@ -275,7 +275,7 @@ func SaveScoredPositions(dataFile, saveFile string, skip, maxRoutines int, appen
 	return nil
 }
 
-func boardString(pos string) (rb.Board, error) {
+func BoardString(pos string) (rb.Board, error) {
 	ret := rb.Board{}
 	var err error
 

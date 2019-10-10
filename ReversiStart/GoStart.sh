@@ -1,1 +1,1 @@
-cd ./../ReversiGo && go build && ./ReversiGo 127.0.0.1 2
+cd ./../ReversiGo2 && go build && ./ReversiGo2 127.0.0.1 2

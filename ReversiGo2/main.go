@@ -11,7 +11,14 @@ import (
 )
 
 func main() {
-	generate.SaveScoredPositions("games.txt", "positions.txt", 6, 15, true, "[0 0 0 2 0 0 1 0 0 0 0 2 0 1 1 2 0 0 0 2 1 1 2 0 0 0 2 1 1 2 0 0 0 2 1 1 2 0 0 0 0 0 2 1 1 0 0 0 0 2 2 2 1 0 0 0 0 0 0 0 0 0 0 0]")
+	// acc, err := benchmark.TestAccuracy()
+	// if err != nil {
+	// 	fmt.Printf("err: %s\n", err.Error())
+	// }
+	// fmt.Printf("acc: %f\n", acc)
+	// return
+
+	generate.SaveScoredPositions("games.txt", "positions.txt", 6, 15, true, "[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 1 0 0 0 1 1 1 2 0 0 0 0 0 0 1 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0]")
 	return
 
 	if len(os.Args) < 3 {
@@ -30,6 +37,7 @@ func main() {
 	client := rc.GetConnection(os.Args[1], player)
 	go client.Receive(messages)
 
+	rb.LoadNetwork("largeNetwork.txt")
 	for {
 		select {
 		case message := <-messages:

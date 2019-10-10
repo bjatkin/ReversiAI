@@ -55,7 +55,7 @@ func (s *Square) adj() []ray {
 			if x == 0 && y == 0 {
 				continue
 			}
-			if s.x+x < 0 || s.x+x > 7 || s.y+y < 0 || s.y+y > 8 {
+			if s.x+x < 0 || s.x+x > 7 || s.y+y < 0 || s.y+y > 7 {
 				continue
 			}
 
@@ -140,10 +140,6 @@ func (b Board) String() string {
 
 //Square returns the value at the x, y square
 func (b Board) Square(x, y int) Square {
-	if x < 0 || x > 7 || y < 0 || y > 7 {
-		return Square{}
-	}
-
 	return Square{
 		x:     x,
 		y:     y,

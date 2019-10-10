@@ -34,7 +34,7 @@ func main() {
 	win := 0
 	loss := 0
 	tie := 0
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 25; i++ {
 		score := runServer()
 		if score == 1 {
 			win++
