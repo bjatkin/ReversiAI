@@ -1,6 +1,7 @@
 package client
 
 import (
+	rb "Projects/School/ReversiBot/ReversiGo2/board"
 	"fmt"
 	"net"
 	"strconv"
@@ -98,7 +99,6 @@ func (client *Client) Receive(message chan Message) {
 				continue
 			}
 
-			//convert the board
 			board := [64]int{}
 			for i, s := range data[4:68] {
 				d, err := strconv.ParseInt(s, 10, 8)
@@ -117,7 +117,7 @@ func (client *Client) Receive(message chan Message) {
 			}
 
 			client.LastUpdate = time.Now().UnixNano()
-			fmt.Printf("turn: %d\nround: %d\n", int(turn), int(round))
+			fmt.Printf("turn: %d\nround: %d\nBoard: %s", int(turn), int(round), rb.Board(board))
 		}
 	}
 }

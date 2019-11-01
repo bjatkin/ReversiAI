@@ -3,7 +3,6 @@ package main
 import (
 	rb "Projects/School/ReversiBot/ReversiGo2/board"
 	rc "Projects/School/ReversiBot/ReversiGo2/client"
-	"Projects/School/ReversiBot/ReversiGo2/generate"
 	"fmt"
 	"os"
 	"strconv"
@@ -11,6 +10,42 @@ import (
 )
 
 func main() {
+	// rb.LoadNetwork("newNetwork.txt")
+	// a := rb.Board{
+	// 	0 1 1 1 0 0 0 0
+	// 	0 0 0 1 0 1 0 0
+	// 	0 0 1 1 1 2 0 1
+	// 	0 2 2 2 2 2 2 1
+	// 	0 0 1 1 2 1 0 1
+	// 	0 1 0 0 2 0 0 0
+	// 	0 0 0 0 2 1 0 0
+	// 	0 0 0 0 0 0 1 0
+	// }
+	// b := rb.Board{
+	// 	0 1 1 1 0 0 0 0
+	// 	0 2 0 1 0 1 0 0
+	// 	0 0 2 1 1 2 0 1
+	// 	0 2 2 2 2 2 2 1
+	// 	0 0 1 1 2 1 0 1
+	// 	0 1 0 0 2 0 0 0
+	// 	0 0 0 0 2 1 0 0
+	// 	0 0 0 0 0 0 1 0
+	// }
+	// c := rb.Board{
+	// 	2, 0, 0, 0, 0, 0, 0, 2,
+	// 	0, 0, 0, 0, 0, 0, 0, 0,
+	// 	0, 0, 0, 0, 0, 0, 0, 0,
+	// 	0, 0, 2, 2, 2, 2, 1, 0,
+	// 	0, 0, 0, 2, 2, 2, 1, 0,
+	// 	0, 0, 2, 1, 1, 1, 1, 0,
+	// 	1, 2, 1, 1, 1, 1, 1, 0,
+	// 	2, 0, 1, 1, 0, 0, 0, 2,
+	// }
+	// fmt.Printf("p1: %d, p2: %d\n", a.Value(1), a.Value(2))
+	// fmt.Printf("p1: %d, p2: %d\n", b.Value(1), b.Value(2))
+	// fmt.Printf("p1: %d, p2: %d\n", c.Value(1), c.Value(2))
+	// return
+
 	// acc, err := benchmark.TestAccuracy()
 	// if err != nil {
 	// 	fmt.Printf("err: %s\n", err.Error())
@@ -18,8 +53,8 @@ func main() {
 	// fmt.Printf("acc: %f\n", acc)
 	// return
 
-	generate.SaveScoredPositions("games.txt", "positions.txt", 6, 15, true, "[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 1 0 0 0 1 1 1 2 0 0 0 0 0 0 1 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0]")
-	return
+	// generate.SaveScoredPositions("games.txt", "positions3.txt", 6, 50, true, "[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1 1 0 0 0 0 0 0 2 2 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]", 5000)
+	// return
 
 	if len(os.Args) < 3 {
 		fmt.Printf("Please specify both the address of the server and the player number\n")
@@ -37,7 +72,7 @@ func main() {
 	client := rc.GetConnection(os.Args[1], player)
 	go client.Receive(messages)
 
-	rb.LoadNetwork("largeNetwork.txt")
+	rb.LoadNetwork("newNetwork.txt")
 	for {
 		select {
 		case message := <-messages:
@@ -49,7 +84,7 @@ func main() {
 			if message.Turn == player {
 				//Get all the valid moves in the current board state
 				board := rb.Board(message.Board)
-				move, pass := findMove(&board, player, 5000*time.Millisecond)
+				move, pass := findMove(&board, player, 500*time.Millisecond)
 				if pass {
 					break //We have no valid moves
 				}
@@ -70,6 +105,8 @@ func findMove(b *rb.Board, player int, searchTime time.Duration) (rb.Move, bool)
 		//No need to search this move, just play it
 		return moves[0], false
 	}
+
+	/* Alpha Beta Pruning
 
 	stops := []chan bool{}
 	scores := []chan int{}
@@ -97,6 +134,17 @@ func findMove(b *rb.Board, player int, searchTime time.Duration) (rb.Move, bool)
 			move = m
 		}
 		close(scores[i])
+	}
+	*/
+
+	max := rb.MinScore - 1
+	move := moves[0]
+	for _, m := range moves {
+		score := b.Move(m).Value(player)
+		if score > max {
+			max = score
+			move = m
+		}
 	}
 
 	return move, false

@@ -160,7 +160,7 @@ func CreateSavedGames(count int, fileName string) {
 }
 
 //SaveScoredPositions get's positions from a file and scores them saving them to a separate file
-func SaveScoredPositions(dataFile, saveFile string, skip, maxRoutines int, append bool, startAt string) error {
+func SaveScoredPositions(dataFile, saveFile string, skip, maxRoutines int, append bool, startAt string, maxPos int) error {
 	rand.Seed(time.Now().Unix() + rando)
 	rando++
 	data, err := os.Open(dataFile)
@@ -180,6 +180,7 @@ func SaveScoredPositions(dataFile, saveFile string, skip, maxRoutines int, appen
 		fmt.Printf("Error Creating Save File %s\n", err.Error())
 		return err
 	}
+
 	defer dest.Close()
 	if !append {
 		dest.WriteString("Game_Position, 1_Black_Wins, 1_White_Wins, 1_Tie, 2_Black_Wins, 2_White_Wins, 2_Tie\n")
@@ -231,7 +232,7 @@ func SaveScoredPositions(dataFile, saveFile string, skip, maxRoutines int, appen
 			select {
 			case pScore := <-scores:
 				routineCount--
-				dest.WriteString(fmt.Sprintf("%v,%d,%d,%d,%d,%d,%d\n",
+				i, err := dest.WriteString(fmt.Sprintf("%v,%d,%d,%d,%d,%d,%d\n",
 					[64]int(pScore.pos),
 					pScore.wlt[0].black,
 					pScore.wlt[0].white,
@@ -240,10 +241,18 @@ func SaveScoredPositions(dataFile, saveFile string, skip, maxRoutines int, appen
 					pScore.wlt[1].white,
 					pScore.wlt[1].tie,
 				))
+				if err != nil {
+					fmt.Printf("Error! %v\n", err.Error())
+				} else {
+					fmt.Printf("Wrote %d bytes\n", i)
+				}
 			}
 		}
 
 		fmt.Printf("Scoring Position #%d...\n", count)
+		if count >= maxPos {
+			break
+		}
 		go func(s chan posScore) {
 			data := posScore{}
 			data.wlt[0] = SlowScoreBoard(&board, 1, 1000)
@@ -260,7 +269,7 @@ func SaveScoredPositions(dataFile, saveFile string, skip, maxRoutines int, appen
 		select {
 		case pScore := <-scores:
 			routineCount--
-			dest.Write([]byte(fmt.Sprintf("%v,%d,%d,%d,%d,%d,%d\n",
+			i, err := dest.Write([]byte(fmt.Sprintf("%v,%d,%d,%d,%d,%d,%d\n",
 				[64]int(pScore.pos),
 				pScore.wlt[0].black,
 				pScore.wlt[0].white,
@@ -269,6 +278,11 @@ func SaveScoredPositions(dataFile, saveFile string, skip, maxRoutines int, appen
 				pScore.wlt[1].white,
 				pScore.wlt[1].tie,
 			)))
+			if err != nil {
+				fmt.Printf("Error! %s\n", err.Error())
+			} else {
+				fmt.Printf("Wrote %d bytes\n", i)
+			}
 		}
 	}
 
