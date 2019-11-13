@@ -3,13 +3,22 @@ package main
 import (
 	rb "Projects/School/ReversiBot/ReversiGo2/board"
 	rc "Projects/School/ReversiBot/ReversiGo2/client"
+	"Projects/School/ReversiBot/ReversiGo2/generate"
 	"fmt"
+	"math/rand"
 	"os"
 	"strconv"
 	"time"
 )
 
 func main() {
+	// err := generate.ParseGameFile("/Users/brandon/Desktop/GradSchool/Semester1/CS 474 DNN/HighQualityData/yahoo-japan.xml")
+
+	// if err != nil {
+	// 	fmt.Printf("err: %v", err.Error())
+	// }
+	// return
+
 	// rb.LoadNetwork("newNetwork.txt")
 	// a := rb.Board{
 	// 	0 1 1 1 0 0 0 0
@@ -53,8 +62,9 @@ func main() {
 	// fmt.Printf("acc: %f\n", acc)
 	// return
 
-	// generate.SaveScoredPositions("games.txt", "positions3.txt", 6, 50, true, "[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1 1 0 0 0 0 0 0 2 2 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]", 5000)
-	// return
+	rb.LoadNetwork("Flat2Layer.txt")
+	generate.SaveScoredPositions2("./data/highQualityData.csv", "./data/gen2/gen2Games.txt", 50, 0, true, "[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 1 1 1 2 2 0 0 0 2 1 2 2 0 0 0 0 0 2 2 1 0 0 0 0 0 2 1 0 0 0 0 0 0 0 0 0 0 0 0]", 500)
+	return
 
 	if len(os.Args) < 3 {
 		fmt.Printf("Please specify both the address of the server and the player number\n")
@@ -72,7 +82,7 @@ func main() {
 	client := rc.GetConnection(os.Args[1], player)
 	go client.Receive(messages)
 
-	rb.LoadNetwork("newNetwork.txt")
+	rb.LoadNetwork("Flat2Layer.txt")
 	for {
 		select {
 		case message := <-messages:
@@ -84,7 +94,7 @@ func main() {
 			if message.Turn == player {
 				//Get all the valid moves in the current board state
 				board := rb.Board(message.Board)
-				move, pass := findMove(&board, player, 500*time.Millisecond)
+				move, pass := findMove(&board, player, 50*time.Millisecond)
 				if pass {
 					break //We have no valid moves
 				}
@@ -106,7 +116,38 @@ func findMove(b *rb.Board, player int, searchTime time.Duration) (rb.Move, bool)
 		return moves[0], false
 	}
 
-	/* Alpha Beta Pruning
+	// move := rb.StocasticBestMove(b, player, moves)
+
+	/* Alpha Beta Pruning Depth */
+
+	// value := rb.MinScore - 1
+	// values := []int{}
+	// move := moves[0]
+	// total := 0
+	// for _, m := range moves {
+	// 	nb := b.Move(m)
+	// 	score := rb.ValueBoardDepth(&nb, player, 0, 1, rb.MaxScore+1)
+	// 	if score > value {
+	// 		value = score
+	// 		move = m
+	// 	}
+	// 	total += score
+	// 	values = append(values, score)
+	// }
+
+	// sel := rand.Intn(total)
+	// if float32(sel) > 0.99*float32(total) {
+	// 	run := 0
+	// 	for i, m := range moves {
+	// 		run += values[i]
+	// 		if sel <= run {
+	// 			move = m
+	// 			break
+	// 		}
+	// 	}
+	// }
+
+	/* Alpha Beta Pruning */
 
 	stops := []chan bool{}
 	scores := []chan int{}
@@ -125,6 +166,8 @@ func findMove(b *rb.Board, player int, searchTime time.Duration) (rb.Move, bool)
 	}
 
 	//Find the best scoring move
+	values := []int{}
+	total := 0
 	max := rb.MinScore - 1
 	move := moves[0]
 	for i, m := range moves {
@@ -133,10 +176,24 @@ func findMove(b *rb.Board, player int, searchTime time.Duration) (rb.Move, bool)
 			max = score
 			move = m
 		}
+		total += score
+		values = append(values, score)
 		close(scores[i])
 	}
-	*/
 
+	sel := rand.Intn(total)
+	if float32(sel) > 0.9*float32(total) {
+		run := 0
+		for i, m := range moves {
+			run += values[i]
+			if sel <= run {
+				move = m
+				break
+			}
+		}
+	}
+
+	/* Simple Max Move
 	max := rb.MinScore - 1
 	move := moves[0]
 	for _, m := range moves {
@@ -146,6 +203,7 @@ func findMove(b *rb.Board, player int, searchTime time.Duration) (rb.Move, bool)
 			move = m
 		}
 	}
+	*/
 
 	return move, false
 }

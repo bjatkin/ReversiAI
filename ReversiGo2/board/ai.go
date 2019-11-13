@@ -1,6 +1,7 @@
 package board
 
 import (
+	"math/rand"
 	"sort"
 )
 
@@ -49,6 +50,80 @@ func ValueBoard(b *Board, player, depth, currentBest int, stop chan bool, value 
 
 		return target, true
 	}
+}
+
+func ValueBoardDepth(b *Board, player, depth, maxDepth, currentBest int) int {
+	if depth == maxDepth {
+		return b.Value(player)
+	}
+
+	moves := b.ValidMoves(player)
+	if len(moves) == 0 {
+		return b.Value(player)
+	}
+
+	var target int
+	var prune bool
+	nextCurrentBest := currentBest
+	prunedMoves := pruneMoves(b, moves, depth, player, 3)
+
+	for i, move := range prunedMoves {
+		nb := move.board
+		score := ValueBoardDepth(nb, player, depth+1, maxDepth, nextCurrentBest)
+		target = miniMax(depth, score, target, i)
+		nextCurrentBest, prune = alphBetaPrune(depth, currentBest, nextCurrentBest, score)
+		if prune {
+			break
+		}
+	}
+
+	return target
+}
+
+func StocasticBestMove(b *Board, player int, moves []Move) Move {
+	value := 0
+	values := []int{}
+	total := 0
+	move := moves[0]
+
+	for _, m := range moves {
+		x, y := m.XY()
+		if x == 0 && y == 0 {
+			return m
+		}
+		if x == 0 && y == 7 {
+			return m
+		}
+		if x == 7 && y == 7 {
+			return m
+		}
+		if x == 7 && y == 0 {
+			return m
+		}
+		nb := b.Move(m)
+		v := nb.Value(player)
+		values = append(values, v)
+		total += v
+		if v > value {
+			value = v
+			move = m
+		}
+	}
+
+	sel := rand.Intn(total)
+	if float32(sel) < 0.99*float32(total) {
+		return move
+	}
+
+	runningT := 0
+	for i, v := range values {
+		runningT += v
+		if sel <= runningT {
+			return moves[i]
+		}
+	}
+
+	return move
 }
 
 func miniMax(depth, score, target, i int) int {
