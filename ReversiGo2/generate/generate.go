@@ -475,10 +475,10 @@ func findMove(b *rb.Board, player int, searchTime time.Duration, moves []rb.Move
 	}
 
 	stops := []chan bool{}
-	scores := []chan int{}
+	scores := []chan float64{}
 	for i, m := range moves {
 		stops = append(stops, make(chan bool, 1))
-		scores = append(scores, make(chan int, 1))
+		scores = append(scores, make(chan float64, 1))
 		nb := b.Move(m)
 		go rb.ValueBoard(&nb, player, 0, rb.MaxScore+1, stops[i], scores[i])
 	}
@@ -491,9 +491,9 @@ func findMove(b *rb.Board, player int, searchTime time.Duration, moves []rb.Move
 	}
 
 	//Find the best scoring move
-	values := []int{}
-	total := 0
-	max := rb.MinScore - 1
+	values := []float64{}
+	total := 0.0
+	max := float64(rb.MinScore - 1)
 	move := moves[0]
 	for i, m := range moves {
 		score := <-scores[i]
@@ -506,12 +506,12 @@ func findMove(b *rb.Board, player int, searchTime time.Duration, moves []rb.Move
 		close(scores[i])
 	}
 
-	sel := rand.Intn(total + 1)
+	sel := rand.Intn(int(total) + 1)
 	if float32(sel) > 0.9*float32(total) {
-		run := 0
+		run := 0.0
 		for i, m := range moves {
 			run += values[i]
-			if sel <= run {
+			if float64(sel) <= run {
 				move = m
 				break
 			}

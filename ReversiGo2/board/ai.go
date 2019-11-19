@@ -6,7 +6,7 @@ import (
 )
 
 //ValueBoard calculates a boards value using minimax and the Board.value() function
-func ValueBoard(b *Board, player, depth, currentBest int, stop chan bool, value chan int) (int, bool) {
+func ValueBoard(b *Board, player, depth int, currentBest float64, stop chan bool, value chan float64) (float64, bool) {
 	select {
 	case <-stop:
 		if depth == 0 {
@@ -17,7 +17,7 @@ func ValueBoard(b *Board, player, depth, currentBest int, stop chan bool, value 
 		return 0, false
 	default:
 		//Keep moving down the tree, we havent been stoped yet
-		var target int
+		var target float64
 		var prune bool
 		moves := b.ValidMoves(player)
 		if len(moves) == 0 {
@@ -52,7 +52,7 @@ func ValueBoard(b *Board, player, depth, currentBest int, stop chan bool, value 
 	}
 }
 
-func ValueBoardDepth(b *Board, player, depth, maxDepth, currentBest int) int {
+func ValueBoardDepth(b *Board, player, depth, maxDepth int, currentBest float64) float64 {
 	if depth == maxDepth {
 		return b.Value(player)
 	}
@@ -62,7 +62,7 @@ func ValueBoardDepth(b *Board, player, depth, maxDepth, currentBest int) int {
 		return b.Value(player)
 	}
 
-	var target int
+	var target float64
 	var prune bool
 	nextCurrentBest := currentBest
 	prunedMoves := pruneMoves(b, moves, depth, player, 3)
@@ -81,9 +81,9 @@ func ValueBoardDepth(b *Board, player, depth, maxDepth, currentBest int) int {
 }
 
 func StocasticBestMove(b *Board, player int, moves []Move) Move {
-	value := 0
-	values := []int{}
-	total := 0
+	value := 0.0
+	values := []float64{}
+	total := 0.0
 	move := moves[0]
 
 	for _, m := range moves {
@@ -110,15 +110,15 @@ func StocasticBestMove(b *Board, player int, moves []Move) Move {
 		}
 	}
 
-	sel := rand.Intn(total)
+	sel := rand.Intn(int(total))
 	if float32(sel) < 0.99*float32(total) {
 		return move
 	}
 
-	runningT := 0
+	runningT := 0.0
 	for i, v := range values {
 		runningT += v
-		if sel <= runningT {
+		if float64(sel) <= runningT {
 			return moves[i]
 		}
 	}
@@ -126,7 +126,7 @@ func StocasticBestMove(b *Board, player int, moves []Move) Move {
 	return move
 }
 
-func miniMax(depth, score, target, i int) int {
+func miniMax(depth int, score, target float64, i int) float64 {
 	if i == 0 {
 		return score
 	}
@@ -143,7 +143,7 @@ func miniMax(depth, score, target, i int) int {
 type valueBoard struct {
 	board *Board
 	move  *Move
-	score int
+	score float64
 }
 
 type byScore []valueBoard
@@ -175,7 +175,7 @@ func pruneMoves(b *Board, moves []Move, depth, player, max int) []valueBoard {
 	return ret[len(ret)-max:]
 }
 
-func alphBetaPrune(depth, currentBest, nextCurrentBest, score int) (int, bool) {
+func alphBetaPrune(depth int, currentBest, nextCurrentBest, score float64) (float64, bool) {
 	//adjust the currentBestValue
 	if depth%2 == 0 && currentBest == MaxScore+1 {
 		currentBest = MinScore - 1
@@ -197,8 +197,6 @@ func alphBetaPrune(depth, currentBest, nextCurrentBest, score int) (int, bool) {
 }
 
 type boardStats struct {
-	win        bool
-	loss       bool
 	stoneCount int
 	frontier   int
 	sweet16    int
@@ -209,4 +207,5 @@ type boardStats struct {
 	xSquares   int
 	cSquares   int
 	bSquares   int
+	aSquares   int
 }
